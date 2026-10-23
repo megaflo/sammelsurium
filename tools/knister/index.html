@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knister Score Card</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: one 7-column grid. Left gutter = diagonal ↘ result, 5 grid columns, right column = row results, with diagonal ↙ result above it. Below: dice pad (2–12). */
+:root {
+  --paper: #eef1f4;
+  --sheet: #fbfcfd;
+  --ink: #1b2733;
+  --ink-soft: #5d6b79;
+  --rule: #b4bfca;
+  --cell: #ffffff;
+  --pen: #c2321f;
+  --diag: #0d6a6a;
+  --diag-tint: #e1f0ef;
+  --score-tint: #fbe9e5;
+  --pick: #1b2733;
+  --pick-ink: #fbfcfd;
+  --font-display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #12171c; --sheet: #1a2129; --ink: #e6ebf0; --ink-soft: #93a1af; --rule: #3a4653;
+    --cell: #212a33; --pen: #ff7b66; --diag: #5fcfcb; --diag-tint: #17302f; --score-tint: #3a2321;
+    --pick: #e6ebf0; --pick-ink: #12171c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #12171c; --sheet: #1a2129; --ink: #e6ebf0; --ink-soft: #93a1af; --rule: #3a4653;
+  --cell: #212a33; --pen: #ff7b66; --diag: #5fcfcb; --diag-tint: #17302f; --score-tint: #3a2321;
+  --pick: #e6ebf0; --pick-ink: #12171c;
+  color-scheme: dark;
+}
+html { color-scheme: light dark; }
+body {
+  margin: 0;
+  background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 15px;
+  padding-block: 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.sheet {
+  max-width: 34rem; margin: 0 auto; background: var(--sheet);
+  border: 1px solid var(--rule); border-radius: 4px; padding: clamp(14px, 4vw, 28px);
+  box-shadow: 0 1px 0 var(--rule), 0 10px 30px -18px rgba(0,0,0,.35);
+}
+header { display: flex; justify-content: space-between; align-items: end; gap: 12px 24px; margin-bottom: 18px; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 2rem; letter-spacing: -.02em; margin: 0; line-height: 1; }
+.turn { text-align: right; line-height: 1; }
+.turn span { display: block; font-size: .7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); margin-bottom: 4px; }
+.turn strong { font: 600 1.8rem var(--font-num); font-variant-numeric: tabular-nums; }
+.turn strong i { font-style: normal; color: var(--ink-soft); font-weight: 400; }
+.grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cell, .res, .gap {
+  aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 0;
+}
+.cell button {
+  width: 100%; height: 100%; font: 500 clamp(1rem, 4.6vw, 1.45rem) var(--font-num);
+  color: var(--ink); background: var(--cell); border: 1.5px solid var(--rule); border-radius: 3px; padding: 0; cursor: default;
+}
+.cell button.in-diag { background-image: linear-gradient(var(--diag-tint), var(--diag-tint)); background-blend-mode: multiply; }
+.cell button.filled { cursor: pointer; }
+.armed .cell button { cursor: pointer; border-color: var(--ink-soft); }
+.armed .cell button:not(.filled) { border-style: dashed; }
+.armed .cell button:hover { border-color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
+.res { font-family: var(--font-num); color: var(--pen); border-radius: 3px; line-height: 1.1; text-align: center; }
+.res b { font-weight: 600; font-size: clamp(1.05rem, 5vw, 1.6rem); }
+.res small { font: 400 .6rem var(--font-body); color: var(--ink-soft); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.res.on { background: var(--score-tint); }
+.res.none b { color: var(--rule); }
+.res.diag { border: 1.5px dashed var(--diag); }
+.res.diag b { color: var(--diag); }
+.res.diag .tag { font: 500 .62rem var(--font-num); color: var(--diag); }
+.res.diag.on { background: var(--diag-tint); }
+.total {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-top: 18px;
+  border-top: 2px solid var(--ink); padding-top: 10px;
+}
+.total span { font-size: .72rem; text-transform: uppercase; letter-spacing: .12em; color: var(--ink-soft); }
+.total strong { font: 600 2.6rem var(--font-num); color: var(--pen); line-height: 1; font-variant-numeric: tabular-nums; }
+
+.pad { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 14px; }
+.prompt { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 10px; min-height: 1.4em; }
+.prompt p { margin: 0; font-weight: 500; }
+.prompt p em { font: 600 1.05rem var(--font-num); font-style: normal; color: var(--pen); }
+.keys { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.key {
+  height: clamp(2.9rem, 12vw, 3.6rem); font: 500 clamp(1.1rem, 5vw, 1.4rem) var(--font-num); color: var(--ink);
+  background: var(--cell); border: 1.5px solid var(--ink); border-radius: 3px; cursor: pointer; padding: 0;
+}
+.key:hover { background: var(--diag-tint); }
+.key[aria-pressed="true"] { background: var(--pick); color: var(--pick-ink); }
+.key.seven { border-color: var(--diag); color: var(--diag); }
+.key.seven[aria-pressed="true"] { background: var(--diag); color: var(--pick-ink); }
+.key:disabled { opacity: .35; cursor: default; }
+.tools { display: flex; gap: 8px; flex-wrap: wrap; }
+.tools button {
+  font: 500 .85rem var(--font-body); color: var(--ink); background: transparent; border: 1.5px solid var(--rule);
+  border-radius: 3px; padding: 5px 11px; cursor: pointer;
+}
+.tools button:hover:not(:disabled) { border-color: var(--ink); }
+.tools button:disabled { opacity: .4; cursor: default; }
+.note { margin: 16px auto 0; max-width: 34rem; font-size: .8rem; color: var(--ink-soft); }
+.note b { color: var(--ink); font-weight: 500; }
+@media (max-width: 440px) { .res small { display: none; } }
+</style>
+</head>
+<body>
+
+<div class="sheet" id="sheet">
+  <header>
+    <h1>Knister</h1>
+    <div class="turn" aria-live="polite"><span id="turn-label">Throw</span><strong id="turn"></strong></div>
+  </header>
+
+  <div class="grid" id="grid" aria-label="Knister score sheet"></div>
+
+  <div class="total"><span>Total score</span><strong id="total">0</strong></div>
+
+  <div class="pad">
+    <div class="prompt">
+      <p id="prompt"></p>
+      <div class="tools">
+        <button id="undo" type="button">Undo last</button>
+        <button id="clear" type="button">Clear sheet</button>
+      </div>
+    </div>
+    <div class="keys" id="keys" role="group" aria-label="Dice result"></div>
+  </div>
+</div>
+
+<p class="note">Tap the sum that was thrown, then tap a cell to write it there. Tap a filled cell to pick its number up again and move it. A line is scored once its five cells are filled. Dashed fields are the main diagonals and count double. <a href="../">All tools</a></p>
+
+<script>
+(function () {
+  var cells = new Array(25).fill(null);
+  var history = [];      // cell indexes in the order they were filled
+  var pending = null;    // sum picked on the pad, waiting for a cell
+
+  var LINES = [], c, r;
+  for (c = 0; c < 5; c++) LINES.push({ idx: [0, 1, 2, 3, 4].map(function (k) { return k * 5 + c; }), mult: 1, id: 'col' + c });
+  for (r = 0; r < 5; r++) LINES.push({ idx: [0, 1, 2, 3, 4].map(function (k) { return r * 5 + k; }), mult: 1, id: 'row' + r });
+  LINES.push({ idx: [0, 6, 12, 18, 24], mult: 2, id: 'diagA' });
+  LINES.push({ idx: [4, 8, 12, 16, 20], mult: 2, id: 'diagB' });
+  function byId(id) { return LINES.filter(function (l) { return l.id === id; })[0]; }
+
+  function evaluate(v) {
+    if (v.some(function (x) { return x == null; })) return null;
+    var cnt = {};
+    v.forEach(function (x) { cnt[x] = (cnt[x] || 0) + 1; });
+    var key = Object.keys(cnt).map(function (k) { return cnt[k]; }).sort(function (a, b) { return b - a; }).join('');
+    if (key === '5') return { p: 10, n: 'Five alike' };
+    if (key === '41') return { p: 8, n: 'Four alike' };
+    if (key === '32') return { p: 8, n: 'Full house' };
+    if (key === '11111') {
+      var s = v.slice().sort(function (a, b) { return a - b; });
+      if (s[4] - s[0] === 4) return s.indexOf(7) >= 0 ? { p: 8, n: 'Straight (7)' } : { p: 12, n: 'Straight' };
+    }
+    if (key === '311') return { p: 3, n: 'Three alike' };
+    if (key === '221') return { p: 3, n: 'Two pairs' };
+    if (key === '2111') return { p: 1, n: 'Pair' };
+    return { p: 0, n: '' };
+  }
+
+  var grid = document.getElementById('grid');
+  var cellBtns = [];
+
+  function resCell(line) {
+    var d = document.createElement('div');
+    d.id = 'res-' + line.id;
+    line.el = d;
+    return d;
+  }
+  grid.appendChild(resCell(byId('diagA')));
+  for (c = 0; c < 5; c++) grid.appendChild(resCell(byId('col' + c)));
+  grid.appendChild(resCell(byId('diagB')));
+  for (r = 0; r < 5; r++) {
+    var g = document.createElement('div'); g.className = 'gap'; grid.appendChild(g);
+    for (c = 0; c < 5; c++) {
+      var wrap = document.createElement('div'); wrap.className = 'cell';
+      var b = document.createElement('button');
+      b.type = 'button'; b.id = 'cell-' + r + '-' + c; b.dataset.i = r * 5 + c;
+      if (r === c || r + c === 4) b.classList.add('in-diag');
+      wrap.appendChild(b); grid.appendChild(wrap); cellBtns.push(b);
+    }
+    grid.appendChild(resCell(byId('row' + r)));
+  }
+
+  var keysEl = document.getElementById('keys');
+  var keyBtns = {};
+  for (var n = 2; n <= 12; n++) {
+    var k = document.createElement('button');
+    k.type = 'button'; k.id = 'key-' + n; k.className = 'key' + (n === 7 ? ' seven' : '');
+    k.textContent = n; k.dataset.n = n;
+    k.setAttribute('aria-pressed', 'false');
+    keysEl.appendChild(k); keyBtns[n] = k;
+  }
+
+  function render() {
+    var total = 0, filled = history.length, done = filled === 25;
+
+    LINES.forEach(function (line) {
+      var res = evaluate(line.idx.map(function (i) { return cells[i]; }));
+      var el = line.el, isD = line.mult > 1;
+      var tag = isD ? '<span class="tag">×2 ' + (line.id === 'diagA' ? '↘' : '↙') + '</span>' : '';
+      if (res == null) {
+        el.className = 'res' + (isD ? ' diag' : '') + ' none';
+        el.innerHTML = '<b>–</b>' + tag;
+      } else {
+        var pts = res.p * line.mult;
+        total += pts;
+        el.className = 'res' + (isD ? ' diag' : '') + (pts > 0 ? ' on' : ' none');
+        el.innerHTML = '<b>' + pts + '</b>' + (isD ? tag : '<small>' + res.n + '</small>');
+      }
+    });
+
+    cellBtns.forEach(function (b, i) {
+      var v = cells[i];
+      b.textContent = v == null ? '' : v;
+      b.classList.toggle('filled', v != null);
+      b.setAttribute('aria-label', 'Row ' + (Math.floor(i / 5) + 1) + ', column ' + (i % 5 + 1) + (v == null ? ', empty' : ', ' + v));
+    });
+    document.getElementById('sheet').classList.toggle('armed', pending != null);
+
+    document.getElementById('total').textContent = total;
+    document.getElementById('turn-label').textContent = done ? 'Sheet' : 'Throw';
+    document.getElementById('turn').innerHTML = done ? 'complete' : (filled + 1) + ' <i>/ 25</i>';
+
+    var prompt = document.getElementById('prompt');
+    if (pending != null) prompt.innerHTML = 'Place the <em>' + pending + '</em> in a cell';
+    else if (done) prompt.textContent = 'All 25 cells are filled.';
+    else prompt.textContent = 'Which number was thrown?';
+
+    for (var m = 2; m <= 12; m++) {
+      keyBtns[m].setAttribute('aria-pressed', String(pending === m));
+      keyBtns[m].disabled = done && pending == null;
+    }
+    document.getElementById('undo').disabled = history.length === 0;
+  }
+
+  keysEl.addEventListener('click', function (e) {
+    var t = e.target.closest('.key');
+    if (!t) return;
+    var v = parseInt(t.dataset.n, 10);
+    pending = pending === v ? null : v;
+    render();
+  });
+
+  grid.addEventListener('click', function (e) {
+    var b = e.target.closest('.cell button');
+    if (!b) return;
+    var i = parseInt(b.dataset.i, 10), old = cells[i];
+    if (pending != null) {
+      cells[i] = pending;
+      if (old == null) history.push(i);
+      pending = old;               // swap: the displaced number is picked up
+    } else if (old != null) {
+      cells[i] = null;             // pick the number up again
+      history = history.filter(function (x) { return x !== i; });
+      pending = old;
+    }
+    render();
+  });
+
+  document.getElementById('undo').addEventListener('click', function () {
+    var i = history.pop();
+    if (i != null) cells[i] = null;
+    pending = null;
+    render();
+  });
+  document.getElementById('clear').addEventListener('click', function () {
+    cells = new Array(25).fill(null); history = []; pending = null; render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
