@@ -142,6 +142,33 @@ test("closer with strictly lowest score is not doubled; negative never doubled",
   assert.equal(g.doubled, false);
 });
 
+test("next round is started by the previous closer, not the highest sum", () => {
+  const g = setup();
+  flipTwo(g);
+  const a = g.turn, b = (a + 1) % 2;
+  const pa = g.players[a], pb = g.players[b];
+  fill(pa, 5); fill(pb, 1);
+  pb.grid.forEach((c, i) => { c.up = i !== 7; });
+  g.draw.push(9);
+  apply(g, pa.id, { a: "draw" });
+  apply(g, pa.id, { a: "discard" });
+  apply(g, pa.id, { a: "flip", i: 2 });
+  g.draw.push(2);
+  apply(g, pb.id, { a: "draw" });
+  apply(g, pb.id, { a: "swap", i: 7 });
+  assert.equal(g.closer, b);
+  g.draw.push(3);
+  apply(g, pa.id, { a: "draw" });
+  apply(g, pa.id, { a: "discard" });
+  apply(g, pa.id, { a: "flip", i: 3 });
+  assert.equal(g.phase, "roundEnd");
+  apply(g, "p0", { a: "next" }, seeded(5));
+  g.players[a].grid[0].v = 12; g.players[a].grid[1].v = 12;
+  g.players[b].grid[0].v = -2; g.players[b].grid[1].v = -2;
+  flipTwo(g);
+  assert.equal(g.turn, b);
+});
+
 test("game ends at 100 and the lowest total wins; rematch resets", () => {
   const g = setup();
   flipTwo(g);
