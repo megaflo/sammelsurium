@@ -158,7 +158,7 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
     v.forEach(function (x) { cnt[x] = (cnt[x] || 0) + 1; });
     var key = Object.keys(cnt).map(function (k) { return cnt[k]; }).sort(function (a, b) { return b - a; }).join('');
     if (key === '5') return { p: 10, n: 'Five alike' };
-    if (key === '41') return { p: 8, n: 'Four alike' };
+    if (key === '41') return { p: 6, n: 'Four alike' };
     if (key === '32') return { p: 8, n: 'Full house' };
     if (key === '11111') {
       var s = v.slice().sort(function (a, b) { return a - b; });
