@@ -12,9 +12,9 @@ export function pack(desc) {
   const one = (re) => (sdp.match(re) || [])[1];
   const ufrag = one(/a=ice-ufrag:(\S+)/);
   const pwd = one(/a=ice-pwd:(\S+)/);
-  const fp = one(/a=fingerprint:sha-256 (\S+)/);
+  const fp = one(/a=fingerprint:sha-256 (\S+)/i);
   if (!ufrag || !pwd || !fp) throw new Error("Unexpected session description");
-  const cands = [...sdp.matchAll(/a=candidate:\S+ 1 udp \d+ (\S+) (\d+) typ host/g)]
+  const cands = [...sdp.matchAll(/a=candidate:\S+ 1 udp \d+ (\S+) (\d+) typ host/gi)]
     .filter((m) => !m[1].includes(":"))
     .map((m) => `${m[1]}:${m[2]}`);
   if (!cands.length) throw new Error("No local network address found. Is this device connected to the hotspot?");
