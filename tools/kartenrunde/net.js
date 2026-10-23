@@ -49,6 +49,26 @@ export function unpack(code, expectedType) {
   return { type, sdp: lines.join("\r\n") + "\r\n" };
 }
 
+// Browsers hide local addresses behind random ".local" names unless the page is capturing
+// media, and many hotspots do not resolve those names. Holding a camera stream while the
+// addresses are gathered makes the browser report the real ones. Without permission we go on.
+async function holdCapture() {
+  try {
+    const stream = await Promise.race([
+      navigator.mediaDevices.getUserMedia({ video: true }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("no answer")), 15000)),
+    ]);
+    return () => stream.getTracks().forEach((t) => t.stop());
+  } catch {
+    return () => {};
+  }
+}
+
+// The addresses inside a code, for showing them to the user.
+export function addressesOf(code) {
+  return String(code).split("~")[5]?.split(",").map((c) => c.slice(0, c.lastIndexOf(":"))) ?? [];
+}
+
 function gathered(pc) {
   return new Promise((resolve) => {
     if (pc.iceGatheringState === "complete") return resolve();
@@ -66,10 +86,13 @@ const opened = (ch) => new Promise((resolve, reject) => {
 
 // Host side, step 1: make the code to show to the joining player.
 export async function createInvite() {
+  const release = await holdCapture();
   const pc = new RTCPeerConnection(CONFIG);
   const channel = pc.createDataChannel("kartenrunde");
-  await pc.setLocalDescription(await pc.createOffer());
-  await gathered(pc);
+  try {
+    await pc.setLocalDescription(await pc.createOffer());
+    await gathered(pc);
+  } finally { release(); }
   const ready = opened(channel);
   ready.catch(() => {});
   return { pc, channel, code: pack(pc.localDescription), ready };
@@ -83,13 +106,16 @@ export async function acceptReply(invite, code) {
 // Guest side: take the host's code, produce the reply code.
 export async function joinWith(code) {
   const offer = unpack(code, "offer");
+  const release = await holdCapture();
   const pc = new RTCPeerConnection(CONFIG);
   const ready = new Promise((resolve, reject) => {
     pc.addEventListener("datachannel", (e) => opened(e.channel).then(resolve, reject));
   });
   ready.catch(() => {});
-  await pc.setRemoteDescription(offer);
-  await pc.setLocalDescription(await pc.createAnswer());
-  await gathered(pc);
+  try {
+    await pc.setRemoteDescription(offer);
+    await pc.setLocalDescription(await pc.createAnswer());
+    await gathered(pc);
+  } finally { release(); }
   return { pc, code: pack(pc.localDescription), ready };
 }

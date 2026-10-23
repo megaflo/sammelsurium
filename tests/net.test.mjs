@@ -44,3 +44,8 @@ test("unpack rejects codes of the wrong kind", () => {
   assert.throws(() => unpack(offer, "answer"), /host's code/);
   assert.throws(() => unpack("hello", "offer"), /not a Kartenrunde/);
 });
+
+test("addressesOf lists the addresses inside a code", async () => {
+  const { addressesOf } = await import("../tools/kartenrunde/net.js");
+  assert.deepEqual(addressesOf(pack({ type: "offer", sdp: chrome })), ["192.168.43.5", "b1f0c3a2-1111-4222-8333-444455556666.local"]);
+});

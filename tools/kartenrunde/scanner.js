@@ -4,9 +4,15 @@ export async function startScanner(video, onCode) {
   const stream = await navigator.mediaDevices.getUserMedia({
     video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false,
   });
+  video.muted = true; // the attribute alone is not enough on iOS; autoplay needs the property
+  video.playsInline = true;
   video.srcObject = stream;
-  video.setAttribute("playsinline", "");
-  await video.play();
+  try {
+    await video.play();
+  } catch (e) {
+    stream.getTracks().forEach((t) => t.stop());
+    throw e;
+  }
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   let stopped = false;
