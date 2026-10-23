@@ -1,12 +1,12 @@
 :root {
   --bg: #eef2f6; --panel: #ffffff; --ink: #18222d; --soft: #5f6e7d; --rule: #c5cfd9;
   --accent: #2b5fd9; --accent-ink: #ffffff; --turn: #f2a900; --danger: #c2321f;
-  --back: #3a4a7a; --back-2: #4a5c92;
-  --neg: #3d4ba8; --zero: #7cc4ee; --low: #4cae5a; --mid: #f1cf43; --high: #e0553f;
+  --back: #5a3d6e; --back-2: #6d4c84;
+  --neg: #5b3fa0; --zero: #cfd6e4; --low: #1f9d8f; --mid: #f08a24; --high: #c2285f;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #11161c; --panel: #1b222b; --ink: #e8edf2; --soft: #95a3b1; --rule: #364351; --accent: #6b94ff; --accent-ink: #0b1220; --back: #2a3556; --back-2: #34426a; }
+  :root { --bg: #11161c; --panel: #1b222b; --ink: #e8edf2; --soft: #95a3b1; --rule: #364351; --accent: #6b94ff; --accent-ink: #0b1220; --back: #3f2b4f; --back-2: #4e3662; }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -38,9 +38,9 @@ video.cam { display: block; width: 100%; max-height: 22rem; background: #000; bo
 /* Cards */
 .card { position: relative; width: 100%; aspect-ratio: 5 / 7; border-radius: 8px; border: 2px solid rgba(0,0,0,.25); display: grid; place-items: center; font-weight: 800; font-size: 1.5rem; color: #fff; padding: 0; min-height: 0; user-select: none; }
 .card.v-neg { background: var(--neg); }
-.card.v-zero { background: var(--zero); color: #10324a; }
+.card.v-zero { background: var(--zero); color: #1f2a3d; }
 .card.v-low { background: var(--low); }
-.card.v-mid { background: var(--mid); color: #3a2f00; }
+.card.v-mid { background: var(--mid); color: #2d1800; }
 .card.v-high { background: var(--high); }
 .card.down { background: repeating-linear-gradient(45deg, var(--back), var(--back) 6px, var(--back-2) 6px, var(--back-2) 12px); color: transparent; }
 .card.gone { background: none; border: 2px dashed var(--rule); }

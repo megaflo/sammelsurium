@@ -1,4 +1,4 @@
-// Skyjo rules as pure functions. The host owns the state and applies every action;
+// Card game rules as pure functions. The host owns the state and applies every action;
 // guests only receive a masked view (see viewFor).
 
 export const COLS = 4;

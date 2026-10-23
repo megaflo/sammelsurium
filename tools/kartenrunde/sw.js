@@ -1,5 +1,5 @@
 // Caches the app on first visit so it can be opened later without any internet connection.
-const CACHE = "skyjo-v1";
+const CACHE = "kartenrunde-v1";
 const FILES = ["./", "index.html", "style.css", "app.js", "game.js", "net.js", "scanner.js", "vendor/qrcode.mjs", "vendor/jsQR.js"];
 
 self.addEventListener("install", (e) => {

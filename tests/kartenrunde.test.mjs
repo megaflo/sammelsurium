@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { makeDeck, newGame, addPlayer, startRound, apply, viewFor, gridSum, rematch } from "../tools/skyjo/game.js";
+import { makeDeck, newGame, addPlayer, startRound, apply, viewFor, gridSum, rematch } from "../tools/kartenrunde/game.js";
 
 const seeded = (seed = 1) => () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 

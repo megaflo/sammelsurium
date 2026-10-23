@@ -19,12 +19,12 @@ export function pack(desc) {
     .map((m) => `${m[1]}:${m[2]}`);
   if (!cands.length) throw new Error("No local network address found. Is this device connected to the hotspot?");
   const fpB64 = toB64(fp.split(":").map((h) => parseInt(h, 16)));
-  return ["SJ1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(",")].join("~");
+  return ["KR1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(",")].join("~");
 }
 
 export function unpack(code, expectedType) {
   const parts = String(code).trim().split("~");
-  if (parts.length !== 6 || parts[0] !== "SJ1") throw new Error("This is not a Skyjo connection code");
+  if (parts.length !== 6 || parts[0] !== "KR1") throw new Error("This is not a Kartenrunde connection code");
   const [, kind, ufrag, pwd, fpB64, cands] = parts;
   const type = kind === "o" ? "offer" : "answer";
   if (type !== expectedType) throw new Error(type === "offer" ? "That is the host's code, not a reply" : "That is a reply, not the host's code");
@@ -61,7 +61,7 @@ const opened = (ch) => new Promise((resolve, reject) => {
 // Host side, step 1: make the code to show to the joining player.
 export async function createInvite() {
   const pc = new RTCPeerConnection(CONFIG);
-  const channel = pc.createDataChannel("skyjo");
+  const channel = pc.createDataChannel("kartenrunde");
   await pc.setLocalDescription(await pc.createOffer());
   await gathered(pc);
   const ready = opened(channel);

@@ -19,7 +19,7 @@ python3 -m http.server -d _site
 ## Tests
 
 ```sh
-node --test tests/
+node --test tests/*.test.mjs
 ```
 
 ## One-time setup

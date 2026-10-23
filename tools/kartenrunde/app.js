@@ -99,16 +99,16 @@ const ui = {};
 function home() {
   role = null; game = null; view = null; screen = null;
   peers.clear();
-  const name = h("input", { type: "text", maxlength: "16", placeholder: "Your name", value: store.get("skyjo-name") || "", "aria-label": "Your name" });
+  const name = h("input", { type: "text", maxlength: "16", placeholder: "Your name", value: store.get("kartenrunde-name") || "", "aria-label": "Your name" });
   const need = () => {
     const n = name.value.trim();
     if (!n) { toast("Enter your name first"); name.focus(); return null; }
-    store.set("skyjo-name", n);
+    store.set("kartenrunde-name", n);
     return n;
   };
   const saved = loadSaved();
   root.replaceChildren(
-    h("h1", {}, "Skyjo"),
+    h("h1", {}, "Kartenrunde"),
     h("p", { class: "soft" }, "2–8 players, one device each, all on the same hotspot. Connections are set up by scanning QR codes, no internet needed."),
     h("div", { class: "panel" },
       h("p", {}, name),
@@ -122,7 +122,7 @@ function home() {
 // ---------- host ----------
 function loadSaved() {
   try {
-    const s = JSON.parse(store.get("skyjo-host"));
+    const s = JSON.parse(store.get("kartenrunde-host"));
     return s && s.game && s.game.players.length ? s : null;
   } catch { return null; }
 }
@@ -146,7 +146,7 @@ function resumeHost(saved) {
 }
 
 function persist() {
-  if (role === "host") store.set("skyjo-host", JSON.stringify({ game, nextId }));
+  if (role === "host") store.set("kartenrunde-host", JSON.stringify({ game, nextId }));
 }
 
 function send(ch, msg) {
@@ -183,7 +183,7 @@ function showLobby() {
   ui.start = h("button", { class: "primary", onclick: () => { try { startRound(game); broadcast(); } catch (e) { toast(e.message); } } }, "Start game");
   ui.addBtn = h("button", { onclick: () => openInvite(ui.invite, null) }, "Add a player");
   root.replaceChildren(
-    h("h1", {}, "Skyjo"),
+    h("h1", {}, "Kartenrunde"),
     h("div", { class: "panel" }, h("h2", {}, "Players"), ui.plist, h("div", { class: "row" }, ui.addBtn, ui.start)),
     ui.invite,
     h("p", {}, h("button", { onclick: () => { if (confirm("Leave the lobby?")) { closeAll(); home(); } } }, "Leave")));
@@ -276,7 +276,7 @@ function onHello(ch, seat, name) {
 function startJoin(name) {
   role = "guest"; myName = name;
   const box = h("div");
-  root.replaceChildren(h("h1", {}, "Skyjo"), box, h("p", {}, h("button", { onclick: () => { closeAll(); home(); } }, "Back")));
+  root.replaceChildren(h("h1", {}, "Kartenrunde"), box, h("p", {}, h("button", { onclick: () => { closeAll(); home(); } }, "Back")));
   runJoin(box);
 }
 
@@ -353,7 +353,7 @@ function guestLobbyShell() {
   screen = "lobby";
   ui.plist = h("div");
   ui.invite = h("div");
-  root.replaceChildren(h("h1", {}, "Skyjo"), h("div", { class: "panel" }, h("h2", {}, "Players"), ui.plist, h("p", { class: "soft" }, "Waiting for the host to start the game…")), ui.invite);
+  root.replaceChildren(h("h1", {}, "Kartenrunde"), h("div", { class: "panel" }, h("h2", {}, "Players"), ui.plist, h("p", { class: "soft" }, "Waiting for the host to start the game…")), ui.invite);
 }
 
 function gameShell() {
