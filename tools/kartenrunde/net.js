@@ -4,6 +4,41 @@
 
 const CONFIG = { iceServers: [] };
 
+// Some browsers close a connection whose RTCPeerConnection nothing refers to any more.
+const alive = new Set();
+
+function track(pc) {
+  alive.add(pc);
+  const t0 = Date.now();
+  pc.trace = [];
+  const note = (what) => pc.trace.push(`${((Date.now() - t0) / 1000).toFixed(1)}s ${what}`);
+  pc.addEventListener("iceconnectionstatechange", () => note(`ice ${pc.iceConnectionState}`));
+  pc.addEventListener("connectionstatechange", () => {
+    note(`connection ${pc.connectionState}`);
+    if (pc.connectionState === "closed") alive.delete(pc);
+  });
+  return pc;
+}
+
+// A short report on how far the connection got, shown when it fails.
+export async function diagnose(pc) {
+  const lines = [`ice ${pc.iceConnectionState}, connection ${pc.connectionState}`, ...pc.trace];
+  try {
+    const local = [];
+    const remote = [];
+    const pairs = {};
+    (await pc.getStats()).forEach((r) => {
+      const where = `${r.address || r.ip}:${r.port} ${r.protocol || ""} ${r.candidateType}`;
+      if (r.type === "local-candidate") local.push(where);
+      else if (r.type === "remote-candidate") remote.push(where);
+      else if (r.type === "candidate-pair") pairs[r.state] = (pairs[r.state] || 0) + 1;
+    });
+    lines.push(`this device: ${local.join("; ") || "none"}`, `other device: ${remote.join("; ") || "none"}`,
+      `address pairs: ${Object.entries(pairs).map(([k, v]) => `${v} ${k}`).join(", ") || "none"}`);
+  } catch { /* stats are not available everywhere */ }
+  return lines.join("\n");
+}
+
 const toB64 = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const fromB64 = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 
@@ -24,14 +59,15 @@ export function pack(desc) {
     const found = seen.length ? seen.map((c) => `${c.proto} ${c.type} ${c.ip}`).join(", ") : "no candidates at all";
     throw new Error(`No usable network address found (browser offered: ${found}). Is this device connected to the hotspot?`);
   }
+  const setup = { active: "a", passive: "p", actpass: "c" }[one(/a=setup:(\w+)/)] ?? (desc.type === "offer" ? "c" : "a");
   const fpB64 = toB64(fp.split(":").map((h) => parseInt(h, 16)));
-  return ["KR1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(",")].join("~");
+  return ["KR1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(","), setup].join("~");
 }
 
 export function unpack(code, expectedType) {
   const parts = String(code).trim().split("~");
-  if (parts.length !== 6 || parts[0] !== "KR1") throw new Error("This is not a Kartenrunde connection code");
-  const [, kind, ufrag, pwd, fpB64, cands] = parts;
+  if (parts.length < 6 || parts.length > 7 || parts[0] !== "KR1") throw new Error("This is not a Kartenrunde connection code");
+  const [, kind, ufrag, pwd, fpB64, cands, setupCode] = parts;
   const type = kind === "o" ? "offer" : "answer";
   if (type !== expectedType) throw new Error(type === "offer" ? "That is the host's code, not a reply" : "That is a reply, not the host's code");
   const fp = [...fromB64(fpB64)].map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join(":");
@@ -39,7 +75,7 @@ export function unpack(code, expectedType) {
     "v=0", "o=- 1 2 IN IP4 127.0.0.1", "s=-", "t=0 0", "a=group:BUNDLE 0", "a=msid-semantic: WMS",
     "m=application 9 UDP/DTLS/SCTP webrtc-datachannel", "c=IN IP4 0.0.0.0",
     `a=ice-ufrag:${ufrag}`, `a=ice-pwd:${pwd}`, `a=fingerprint:sha-256 ${fp}`,
-    `a=setup:${type === "offer" ? "actpass" : "active"}`, "a=mid:0", "a=sctp-port:5000", "a=max-message-size:262144",
+    `a=setup:${{ a: "active", p: "passive", c: "actpass" }[setupCode] ?? (type === "offer" ? "actpass" : "active")}`, "a=mid:0", "a=sctp-port:5000", "a=max-message-size:262144",
   ];
   cands.split(",").forEach((c, i) => {
     const k = c.lastIndexOf(":");
@@ -87,7 +123,7 @@ const opened = (ch) => new Promise((resolve, reject) => {
 // Host side, step 1: make the code to show to the joining player.
 export async function createInvite() {
   const release = await holdCapture();
-  const pc = new RTCPeerConnection(CONFIG);
+  const pc = track(new RTCPeerConnection(CONFIG));
   const channel = pc.createDataChannel("kartenrunde");
   try {
     await pc.setLocalDescription(await pc.createOffer());
@@ -107,7 +143,7 @@ export async function acceptReply(invite, code) {
 export async function joinWith(code) {
   const offer = unpack(code, "offer");
   const release = await holdCapture();
-  const pc = new RTCPeerConnection(CONFIG);
+  const pc = track(new RTCPeerConnection(CONFIG));
   const ready = new Promise((resolve, reject) => {
     pc.addEventListener("datachannel", (e) => opened(e.channel).then(resolve, reject));
   });

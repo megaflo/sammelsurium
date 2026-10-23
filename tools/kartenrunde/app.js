@@ -1,5 +1,5 @@
 import { newGame, addPlayer, startRound, apply, viewFor, rematch, gridSum, COLS, END_SCORE } from "./game.js";
-import { createInvite, acceptReply, joinWith, addressesOf } from "./net.js";
+import { createInvite, acceptReply, joinWith, addressesOf, diagnose } from "./net.js";
 import { startScanner } from "./scanner.js";
 import qrcode from "./vendor/qrcode.mjs";
 
@@ -247,7 +247,13 @@ async function openInvite(box, pid) {
   }
   const cancel = () => { inv.pc.close(); close(); };
   box.cancel = cancel;
-  const failed = (msg) => { toast(msg); cancel(); };
+  const failed = async (msg) => {
+    if (scanner) scanner.stop();
+    const report = await diagnose(inv.pc);
+    inv.pc.close();
+    box.cancel = null;
+    box.replaceChildren(failurePanel(msg, report, close));
+  };
   const stepScan = () => {
     scanner = codeInput(async (code) => {
       box.querySelector("[data-step]").replaceChildren(h("p", {}, "Connecting…"));
@@ -309,13 +315,22 @@ function startJoin(name) {
   runJoin(box);
 }
 
+function failurePanel(msg, report, onClose, label = "Close") {
+  return h("div", { class: "panel" },
+    h("p", { class: "err" }, msg),
+    h("p", { class: "soft" }, "How far the connection got (please send this if it keeps failing):"),
+    h("pre", {}, report),
+    h("button", { class: "primary", onclick: onClose }, label));
+}
+
 function runJoin(box, done) {
   let scanner = null;
   const stop = () => { if (scanner) scanner.stop(); };
   scanner = codeInput(async (code) => {
     box.replaceChildren(h("div", { class: "panel" }, h("p", {}, "Connecting…")));
+    let join = null;
     try {
-      const join = await joinWith(code);
+      join = await joinWith(code);
       box.replaceChildren(h("div", { class: "panel" },
         h("h2", {}, "Show this to the host"),
         h("p", { class: "soft" }, "The host scans this code with “Next: scan their reply”."),
@@ -328,8 +343,10 @@ function runJoin(box, done) {
       box.replaceChildren();
       if (done) done();
     } catch (e) {
-      toast(e.message);
-      runJoin(box, done);
+      if (!join) { toast(e.message); runJoin(box, done); return; }
+      const report = await diagnose(join.pc);
+      join.pc.close();
+      box.replaceChildren(failurePanel(e.message, report, () => runJoin(box, done), "Try again"));
     }
   }, "Connect");
   box.replaceChildren(h("div", { class: "panel" },
