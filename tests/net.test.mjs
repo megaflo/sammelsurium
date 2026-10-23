@@ -29,7 +29,14 @@ test("Firefox SDP (uppercase UDP, other candidate types) yields the IPv4 host ca
 });
 
 test("pack explains when there is no usable address", () => {
-  assert.throws(() => pack({ type: "offer", sdp: chrome.replace(/a=candidate.*\r\n/g, "") }), /No local network address/);
+  assert.throws(() => pack({ type: "offer", sdp: chrome.replace(/a=candidate.*\r\n/g, "") }), /No usable network address.*no candidates at all/);
+});
+
+test("IPv6 is a fallback and link-local addresses are dropped; the error lists what was offered", () => {
+  const v6 = chrome.replace(/a=candidate.*\r\n/g, "") .replace("a=ice-ufrag", "a=candidate:1 1 udp 2113937151 fe80::1 40001 typ host\r\na=candidate:2 1 udp 2113937151 fd00::5 40002 typ host\r\na=ice-ufrag");
+  assert.match(unpack(pack({ type: "offer", sdp: v6 }), "offer").sdp, /fd00::5 40002 typ host/);
+  const onlyLinkLocal = v6.replace(/a=candidate:2.*\r\n/, "");
+  assert.throws(() => pack({ type: "offer", sdp: onlyLinkLocal }), /offered: udp host fe80::1/);
 });
 
 test("unpack rejects codes of the wrong kind", () => {

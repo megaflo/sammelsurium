@@ -25,7 +25,7 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("show"), 2800);
+  toastTimer = setTimeout(() => t.classList.remove("show"), Math.max(2800, msg.length * 70));
 }
 
 const store = {
