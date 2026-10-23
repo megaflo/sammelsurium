@@ -1,6 +1,10 @@
 // WebRTC without a signalling server: the session descriptions travel as short strings
 // (shown as QR codes). Only what a data channel needs is sent: ICE credentials,
-// the DTLS fingerprint and IPv4 host candidates. The SDP is rebuilt on the other side.
+// the DTLS fingerprint, UDP host candidates and the DTLS role. The SDP is rebuilt on the other side.
+
+// Goes into every code, so two devices running different versions say so instead of failing
+// silently. Keep it equal to the number in the cache name in sw.js (a test checks this).
+export const VERSION = "5";
 
 const CONFIG = { iceServers: [] };
 
@@ -9,20 +13,22 @@ const alive = new Set();
 
 function track(pc) {
   alive.add(pc);
+  // close() does not fire connectionstatechange, so forget the connection here.
+  const close = pc.close.bind(pc);
+  pc.close = () => { alive.delete(pc); close(); };
   const t0 = Date.now();
   pc.trace = [];
   const note = (what) => pc.trace.push(`${((Date.now() - t0) / 1000).toFixed(1)}s ${what}`);
   pc.addEventListener("iceconnectionstatechange", () => note(`ice ${pc.iceConnectionState}`));
   pc.addEventListener("connectionstatechange", () => {
     note(`connection ${pc.connectionState}`);
-    if (pc.connectionState === "closed") alive.delete(pc);
   });
   return pc;
 }
 
 // A short report on how far the connection got, shown when it fails.
 export async function diagnose(pc) {
-  const lines = [`ice ${pc.iceConnectionState}, connection ${pc.connectionState}`, ...pc.trace];
+  const lines = [`version ${VERSION}`, `ice ${pc.iceConnectionState}, connection ${pc.connectionState}`, ...pc.trace];
   try {
     const local = [];
     const remote = [];
@@ -61,13 +67,17 @@ export function pack(desc) {
   }
   const setup = { active: "a", passive: "p", actpass: "c" }[one(/a=setup:(\w+)/)] ?? (desc.type === "offer" ? "c" : "a");
   const fpB64 = toB64(fp.split(":").map((h) => parseInt(h, 16)));
-  return ["KR1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(","), setup].join("~");
+  return ["KR1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(","), setup, VERSION].join("~");
 }
 
 export function unpack(code, expectedType) {
   const parts = String(code).trim().split("~");
-  if (parts.length < 6 || parts.length > 7 || parts[0] !== "KR1") throw new Error("This is not a Kartenrunde connection code");
-  const [, kind, ufrag, pwd, fpB64, cands, setupCode] = parts;
+  if (parts.length < 6 || parts[0] !== "KR1") throw new Error("This is not a Kartenrunde connection code");
+  const [, kind, ufrag, pwd, fpB64, cands, setupCode, version] = parts;
+  if (version !== VERSION) {
+    throw new Error(`The other device runs ${version ? `version ${version}` : "an older version"} of Kartenrunde, this one runs version ${VERSION}. `
+      + "Close the page on both devices, open it again while connected to the internet, and check that both show the same version on the start screen.");
+  }
   const type = kind === "o" ? "offer" : "answer";
   if (type !== expectedType) throw new Error(type === "offer" ? "That is the host's code, not a reply" : "That is a reply, not the host's code");
   const fp = [...fromB64(fpB64)].map((b) => b.toString(16).padStart(2, "0").toUpperCase()).join(":");

@@ -1,5 +1,5 @@
 import { newGame, addPlayer, startRound, apply, viewFor, rematch, gridSum, COLS, END_SCORE } from "./game.js";
-import { createInvite, acceptReply, joinWith, addressesOf, diagnose } from "./net.js";
+import { createInvite, acceptReply, joinWith, addressesOf, diagnose, VERSION } from "./net.js";
 import { startScanner } from "./scanner.js";
 import qrcode from "./vendor/qrcode.mjs";
 
@@ -145,7 +145,8 @@ function home() {
         h("button", { class: "primary grow", onclick: () => { const n = need(); if (n) startHost(n); } }, "Host a game"),
         h("button", { class: "grow", onclick: () => { const n = need(); if (n) startJoin(n); } }, "Join a game")),
       saved && h("p", {}, h("button", { onclick: () => resumeHost(saved) }, `Resume hosted game (round ${saved.game.round || 0})`))),
-    h("p", { class: "soft" }, "The host's device keeps the game. If it drops out, the host can resume and everyone scans again."));
+    h("p", { class: "soft" }, "The host's device keeps the game. If it drops out, the host can resume and everyone scans again."),
+    h("p", { class: "soft" }, `Version ${VERSION}. All devices need the same version.`));
 }
 
 // ---------- host ----------
@@ -343,7 +344,8 @@ function runJoin(box, done) {
       box.replaceChildren();
       if (done) done();
     } catch (e) {
-      if (!join) { toast(e.message); runJoin(box, done); return; }
+      // Show the problem instead of scanning again at once, which would read the same code again.
+      if (!join) { box.replaceChildren(h("div", { class: "panel" }, h("p", { class: "err" }, e.message), h("button", { class: "primary", onclick: () => runJoin(box, done) }, "Try again"))); return; }
       const report = await diagnose(join.pc);
       join.pc.close();
       box.replaceChildren(failurePanel(e.message, report, () => runJoin(box, done), "Try again"));
@@ -524,5 +526,8 @@ function scorePanel(v) {
 
 home();
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  // A new version took over: reload to run it, unless a game is under way on this device.
+  const updating = navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (updating && role === null) location.reload(); });
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }

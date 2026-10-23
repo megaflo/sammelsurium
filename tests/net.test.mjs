@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pack, unpack } from "../tools/kartenrunde/net.js";
+import { readFileSync } from "node:fs";
+import { pack, unpack, VERSION } from "../tools/kartenrunde/net.js";
 
 const FP = "7B:8B:F0:65:5F:78:E2:51:3B:AC:6F:F3:3F:46:1B:35:DC:B8:5F:64:1A:24:C2:3D:A7:9C:BA:4B:E1:2A:B3:11";
 
@@ -54,6 +55,17 @@ test("the DTLS setup role travels with the code", () => {
   const passive = chrome.replace("a=setup:actpass", "a=setup:passive");
   assert.match(unpack(pack({ type: "answer", sdp: passive }), "answer").sdp, /a=setup:passive/);
   assert.match(unpack(pack({ type: "offer", sdp: chrome }), "offer").sdp, /a=setup:actpass/);
-  // codes without the role field (older versions) still work
-  assert.match(unpack("KR1~a~abcd~0123456789abcdefghijkl~AAAA~10.0.0.2:4000", "answer").sdp, /a=setup:active/);
+});
+
+test("codes from another version are rejected with the version in the message", () => {
+  const code = pack({ type: "offer", sdp: chrome });
+  assert.ok(code.endsWith(`~c~${VERSION}`));
+  assert.throws(() => unpack(code.replace(/~[^~]+$/, "~4"), "offer"), /runs version 4 of Kartenrunde, this one runs version/);
+  assert.throws(() => unpack("KR1~a~abcd~0123456789abcdefghijkl~AAAA~10.0.0.2:4000~a", "answer"), /an older version/);
+  assert.throws(() => unpack("KR1~a~abcd~0123456789abcdefghijkl~AAAA~10.0.0.2:4000", "answer"), /an older version/);
+});
+
+test("the service worker cache carries the same version as the codes", () => {
+  const sw = readFileSync(new URL("../tools/kartenrunde/sw.js", import.meta.url), "utf8");
+  assert.match(sw, new RegExp(`const CACHE = "kartenrunde-v${VERSION}";`));
 });
