@@ -122,10 +122,12 @@ let view = null; // what the UI shows
 let myName = "";
 let screen = null; // "lobby" | "game"
 let showScores = false;
+let peek = false; // round-end sheet hidden to look at the cards
 const ui = {};
 
 // ---------- home ----------
 function home() {
+  root.className = "";
   role = null; game = null; view = null; screen = null;
   peers.clear();
   const name = h("input", { type: "text", maxlength: "16", placeholder: "Your name", value: store.get("kartenrunde-name") || "", "aria-label": "Your name" });
@@ -207,6 +209,7 @@ function hostAct(pid, a) {
 
 function showLobby() {
   screen = "lobby";
+  root.className = "";
   ui.plist = h("div");
   ui.invite = h("div");
   ui.start = h("button", { class: "primary", onclick: () => { try { startRound(game); broadcast(); } catch (e) { toast(e.message); } } }, "Start game");
@@ -310,6 +313,7 @@ function onHello(ch, seat, name) {
 // ---------- guest ----------
 function startJoin(name) {
   role = "guest"; myName = name;
+  root.className = "";
   const box = h("div");
   root.replaceChildren(h("h1", {}, "Kartenrunde"), box, h("p", {}, h("button", { onclick: () => { closeAll(); home(); } }, "Back")));
   runJoin(box);
@@ -397,6 +401,7 @@ function render() {
 
 function guestLobbyShell() {
   screen = "lobby";
+  root.className = "";
   ui.plist = h("div");
   ui.invite = h("div");
   root.replaceChildren(h("h1", {}, "Kartenrunde"), h("div", { class: "panel" }, h("h2", {}, "Players"), ui.plist, h("p", { class: "soft" }, "Waiting for the host to start the game…")), ui.invite);
@@ -405,14 +410,17 @@ function guestLobbyShell() {
 function gameShell() {
   screen = "game";
   showScores = false;
+  peek = false;
+  root.className = "game";
   ui.bar = h("div", { class: "bar" });
   ui.overlay = h("div");
   ui.others = h("div", { class: "others" });
   ui.table = h("div", { class: "table" });
-  ui.status = h("div", { class: "status" });
-  ui.mine = h("div");
+  ui.dock = h("div", { class: "dock" });
+  ui.mine = h("div", { class: "mine-wrap" });
   ui.invite = h("div");
-  root.replaceChildren(ui.bar, ui.overlay, ui.others, ui.table, ui.status, ui.mine, ui.invite);
+  ui.sheet = h("div");
+  root.replaceChildren(ui.bar, ui.overlay, ui.others, ui.table, ui.dock, ui.mine, ui.invite, ui.sheet);
 }
 
 const cls = (v) => (v <= -1 ? "v-neg" : v === 0 ? "v-zero" : v <= 4 ? "v-low" : v <= 8 ? "v-mid" : "v-high");
@@ -433,13 +441,17 @@ function updateGame() {
   const me = v.players[meIdx];
   const cur = v.players[v.turn];
   const myTurn = v.phase === "play" && v.turn === meIdx;
+  const ended = v.phase === "roundEnd" || v.phase === "gameEnd";
   const flipped = me.grid.filter((c) => c && c.up).length;
+  if (!ended) peek = false;
+  const sheetOpen = ended ? !peek : showScores;
 
   // top bar
+  const closer = v.closer !== null && v.phase === "play" ? v.players[v.closer] : null;
   ui.bar.replaceChildren(
     h("strong", {}, `Round ${v.round}`),
-    v.closer !== null && v.phase === "play" ? h("span", { class: "soft" }, `${v.players[v.closer].name} is out, last turns`) : h("span"),
-    h("button", { onclick: () => { showScores = !showScores; updateGame(); } }, "Scores"));
+    h("span", { class: "chip", hidden: !closer }, closer ? `${closer.id === v.you ? "You are" : `${closer.name} is`} out · last turns` : ""),
+    h("button", { onclick: () => { if (ended) peek = !peek; else showScores = !showScores; updateGame(); } }, ended ? "Results" : "Scores"));
 
   // opponents
   ui.others.replaceChildren(...v.players.filter((_, i) => i !== meIdx).map((p) => {
@@ -449,33 +461,60 @@ function updateGame() {
       h("div", { class: "grid" }, p.grid.map((c) => cardEl(c))));
   }));
 
-  // draw pile, discard pile, held card
+  // draw and discard piles; they shrink once a card is in hand
   const canDraw = myTurn && v.stage === "choose";
   const canTake = canDraw && v.discardTop !== null;
   const canDiscard = myTurn && v.stage === "holding" && v.heldFrom === "draw";
+  const small = myTurn && v.stage === "holding";
+  const dim = ended || v.phase === "setup" || (myTurn && v.stage !== "choose");
   const back = h("button", { class: `card down${canDraw ? " pick" : ""}`, disabled: !canDraw, onclick: () => act({ a: "draw" }), "aria-label": "Draw pile" });
   const top = v.discardTop === null ? h("div", { class: "card empty" }, "empty")
     : h("button", {
-      class: `card ${cls(v.discardTop)}${canTake || canDiscard ? " pick" : ""}`, disabled: !(canTake || canDiscard),
-      onclick: () => act(canDiscard ? { a: "discard" } : { a: "take" }), "aria-label": `Discard pile, top card ${v.discardTop}`,
+      class: `card ${cls(v.discardTop)}${canTake ? " pick" : ""}`, disabled: !canTake,
+      onclick: () => act({ a: "take" }), "aria-label": `Discard pile, top card ${v.discardTop}`,
     }, String(v.discardTop));
-  const held = v.held === null ? h("div", { class: "card empty" }, "–") : h("div", { class: `card ${cls(v.held)}` }, String(v.held));
+  const drawLabel = h("div", { class: "label" }, h("b", {}, "Draw"), small ? h("br") : " · ", String(v.drawCount));
+  const discardLabel = canTake ? h("div", { class: "label" }, h("b", {}, "Take"), ` the ${v.discardTop}`)
+    : h("div", { class: "label" }, h("b", {}, "Discard"), v.discardTop !== null && small ? [h("br"), `top: ${v.discardTop}`] : "");
+  ui.table.className = `table ${small ? "small" : "big"}${dim ? " dim" : ""}`;
   ui.table.replaceChildren(
-    h("div", { class: "slot" }, back, h("div", { class: "label" }, `Draw (${v.drawCount})`)),
-    h("div", { class: "slot" }, top, h("div", { class: "label" }, canDiscard ? "Tap to discard" : "Discard")),
-    h("div", { class: "slot" }, held, h("div", { class: "label" }, v.held === null ? "In hand" : `${cur.name} holds`)));
+    h("div", { class: "slot" }, back, drawLabel),
+    h("div", { class: "slot" }, small ? [discardLabel, top] : [top, discardLabel]));
 
-  // status line
-  let text = "";
-  if (v.phase === "setup") text = flipped < 2 ? `Flip two of your cards (${flipped}/2)` : "Waiting for the others to flip…";
-  else if (v.phase === "play") {
-    if (!myTurn) text = `${cur.name} is playing${cur.connected ? "" : " (disconnected)"}…`;
-    else if (v.stage === "choose") text = "Your turn: draw a card or take the discard";
-    else if (v.stage === "holding") text = v.heldFrom === "draw" ? "Tap one of your cards to swap it, or tap the discard pile to discard and flip a card" : "Tap one of your cards to swap it";
-    else text = "Flip one of your face-down cards";
-  } else text = "Round over";
-  ui.status.className = `status${myTurn || (v.phase === "setup" && flipped < 2) ? " mine" : ""}`;
-  ui.status.textContent = text;
+  // dock: where you are in the turn, and the card in hand
+  let title = "", sub = "";
+  if (v.phase === "setup") {
+    title = flipped < 2 ? "Flip two of your cards" : "Waiting for the others";
+    sub = flipped < 2 ? `${flipped} of 2 flipped. Tap a face-down card.` : "They are still flipping their cards.";
+  } else if (v.phase === "play") {
+    if (!myTurn) {
+      title = `${cur.name} is playing${cur.connected ? "" : " (disconnected)"}`;
+      sub = v.held !== null ? `${cur.name} holds a ${v.held}.` : "";
+    } else if (v.stage === "choose") {
+      title = "Your turn";
+      sub = v.discardTop === null ? "Draw a new card." : `Draw a new card, or take the ${v.discardTop} from the discard pile.`;
+    } else if (v.stage === "holding") {
+      title = `You ${v.heldFrom === "draw" ? "drew" : "took"} a ${v.held}`;
+      sub = v.heldFrom === "draw" ? "Tap a card below to swap it, or discard it and flip a card." : "Tap a card below to swap it.";
+    } else {
+      title = "Flip a card";
+      sub = "Tap one of your face-down cards.";
+    }
+  } else title = "Round over";
+  const track = myTurn ? h("div", { class: "steps" }, ["1 Draw or take", "2 Place", "3 Flip"].map((s, i) => {
+    const at = v.stage === "choose" ? 1 : v.stage === "holding" ? 2 : 3;
+    return h("span", { class: i + 1 === at ? "on" : i + 1 < at ? "done" : "" }, s);
+  })) : null;
+  const text = h("div", { class: "say" }, title, sub && h("small", {}, sub));
+  let body = text;
+  if (v.phase === "play" && v.held !== null && v.stage !== "choose") {
+    body = h("div", { class: "hand" },
+      h("div", { class: `card ${cls(v.held)}`, "aria-label": `Card in hand: ${v.held}` }, String(v.held)),
+      h("div", { class: "side" }, text,
+        canDiscard ? h("button", { onclick: () => act({ a: "discard" }) }, "Discard it") : null));
+  }
+  ui.dock.className = `dock${myTurn || (v.phase === "setup" && flipped < 2) ? " mine" : ""}`;
+  ui.dock.replaceChildren(...[track, body].filter(Boolean));
 
   // my grid
   const clickable = (c) => {
@@ -488,38 +527,47 @@ function updateGame() {
   };
   const kind = v.phase === "play" && v.stage === "holding" ? "swap" : "flip";
   ui.mine.replaceChildren(h("div", { class: `mine-box${myTurn ? " turn" : ""}` },
-    h("div", { class: "name" }, h("span", {}, `${me.name} (you)`), h("span", {}, `${gridSum(me)} shown · total ${me.total}`)),
-    h("div", { class: "grid" }, me.grid.map((c, i) => cardEl(c, { pick: clickable(c), onclick: () => act({ a: kind, i }) })))));
+    h("div", { class: "name" }, h("span", {}, "You"), h("span", {}, `${gridSum(me)} shown · total ${me.total}`)),
+    h("div", { class: "grid" }, me.grid.map((c, i) => h("div", { class: "cell" }, cardEl(c, { pick: clickable(c), onclick: () => act({ a: kind, i }) }))))));
 
-  // scores / round end
+  // reconnect buttons (host) and the scores / round result sheet
   const away = role === "host" ? v.players.filter((p) => !p.connected) : [];
   ui.overlay.replaceChildren(
-    ...(v.phase === "roundEnd" || v.phase === "gameEnd" || showScores ? [scorePanel(v)] : []),
     ...away.map((p) => h("p", {}, h("button", { onclick: () => { openInvite(ui.invite, p.id); ui.invite.scrollIntoView(); } }, `${p.name} is disconnected. Reconnect`))));
+  ui.sheet.replaceChildren(...(sheetOpen ? scoreSheet(v) : []));
 }
 
-function scorePanel(v) {
+// Scores, and at the end of a round or game the result. Slides up over the grids.
+function scoreSheet(v) {
   const over = v.phase === "gameEnd";
+  const ended = over || v.phase === "roundEnd";
   const rounds = Math.max(...v.players.map((p) => p.rounds.length));
+  const last = rounds - 1;
+  const lowest = ended ? Math.min(...v.players.map((p) => p.rounds[last])) : null;
   const head = h("tr", {}, h("th", {}, ""), Array.from({ length: rounds }, (_, i) => h("th", {}, `R${i + 1}`)), h("th", {}, "Total"));
-  const best = Math.min(...v.players.map((p) => p.total));
-  const rows = v.players.map((p) => h("tr", { class: over && v.winner && v.winner.includes(p.id) ? "win" : "" },
+  const rows = v.players.map((p) => h("tr", { class: `${p.id === v.you ? "me" : ""}${ended && p.rounds[last] === lowest ? " best" : ""}${over && v.winner && v.winner.includes(p.id) ? " win" : ""}` },
     h("td", {}, p.name), Array.from({ length: rounds }, (_, i) => h("td", {}, p.rounds[i] === undefined ? "" : String(p.rounds[i]))), h("td", {}, String(p.total))));
-  const parts = [h("h2", {}, over ? "Game over" : v.phase === "roundEnd" ? `Round ${v.round} finished` : "Scores")];
-  if (over) parts.push(h("p", {}, `Winner: ${v.winner.map((id) => v.players.find((p) => p.id === id).name).join(", ")} with ${best} points.`));
-  if (v.closer !== null && (over || v.phase === "roundEnd")) {
-    const c = v.players[v.closer];
-    parts.push(h("p", { class: "soft" }, `${c.name} ended the round${v.doubled ? " without the lowest score, so their points are doubled." : "."}`));
+  const parts = [h("div", { class: "grab" }), h("h2", {}, over ? "Game over" : v.phase === "roundEnd" ? `Round ${v.round} finished` : "Scores")];
+  if (over) parts.push(h("p", { class: "note" }, `Winner: ${v.winner.map((id) => v.players.find((p) => p.id === id).name).join(", ")} with ${Math.min(...v.players.map((p) => p.total))} points.`));
+  if (ended) {
+    const names = v.players.filter((p) => p.rounds[last] === lowest).map((p) => p.name).join(", ");
+    const c = v.closer !== null ? v.players[v.closer] : null;
+    parts.push(h("p", { class: "note" },
+      c ? `${c.name} ended the round${v.doubled ? " without the lowest score, so their points are doubled." : "."} ` : "",
+      `Lowest this round: ${names} (${lowest}).`));
   }
-  parts.push(h("table", {}, head, rows));
-  parts.push(h("p", { class: "soft" }, `The game ends when someone reaches ${END_SCORE} points.`));
-  if (v.phase === "roundEnd" || over) {
+  parts.push(h("div", { class: "tablewrap" }, h("table", {}, head, rows)));
+  parts.push(h("p", { class: "note" }, `The game ends when someone reaches ${END_SCORE} points.`));
+  if (ended) {
     parts.push(role === "host"
-      ? h("button", { class: "primary", onclick: () => act({ a: over ? "rematch" : "next" }) }, over ? "Play again" : "Next round")
-      : h("p", { class: "soft" }, "Waiting for the host…"));
-  }
-  if (!over && v.phase === "play") parts.push(h("button", { onclick: () => { showScores = false; updateGame(); } }, "Close"));
-  return h("div", { class: "panel" }, parts);
+      ? h("div", { class: "row" },
+        h("button", { class: "primary grow", onclick: () => act({ a: over ? "rematch" : "next" }) }, over ? "Play again" : "Next round"),
+        h("button", { onclick: () => { peek = true; updateGame(); } }, "Show cards"))
+      : h("div", { class: "row" },
+        h("p", { class: "soft grow" }, "Waiting for the host…"),
+        h("button", { onclick: () => { peek = true; updateGame(); } }, "Show cards")));
+  } else parts.push(h("button", { class: "primary", onclick: () => { showScores = false; updateGame(); } }, "Close"));
+  return [h("div", { class: "scrim", onclick: () => { if (ended) peek = true; else showScores = false; updateGame(); } }), h("div", { class: "sheet", role: "dialog", "aria-label": "Scores" }, parts)];
 }
 
 home();

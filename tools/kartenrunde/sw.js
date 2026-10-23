@@ -1,6 +1,6 @@
 // Caches the app on first visit so it can be opened later without any internet connection.
 // Bump the version whenever a file changes: a changed sw.js is what makes browsers install the new cache.
-const CACHE = "kartenrunde-v4";
+const CACHE = "kartenrunde-v5";
 const FILES = ["./", "index.html", "style.css", "app.js", "game.js", "net.js", "scanner.js", "vendor/qrcode.mjs", "vendor/jsQR.js"];
 
 self.addEventListener("install", (e) => {
