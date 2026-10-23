@@ -88,28 +88,30 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
 .total strong { font: 600 2.6rem var(--font-num); color: var(--pen); line-height: 1; font-variant-numeric: tabular-nums; }
 
 .pad { margin-top: 18px; border-top: 1px solid var(--rule); padding-top: 14px; }
-.prompt { display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap; margin-bottom: 10px; min-height: 1.4em; }
-.prompt p { margin: 0; font-weight: 500; }
+.prompt { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; margin-bottom: 10px; min-height: 1.9rem; }
+.prompt p { margin: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .prompt p em { font: 600 1.05rem var(--font-num); font-style: normal; color: var(--pen); }
-.keys { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.keys { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px 6px; }
 .key {
-  height: clamp(2.9rem, 12vw, 3.6rem); font: 500 clamp(1.1rem, 5vw, 1.4rem) var(--font-num); color: var(--ink);
-  background: var(--cell); border: 1.5px solid var(--ink); border-radius: 3px; cursor: pointer; padding: 0;
+  height: 2.9rem; font: 500 1.3rem var(--font-num); color: var(--ink); padding: 0; cursor: pointer;
+  background: var(--cell); border: 1.5px solid var(--rule); border-radius: 10px;
+  box-shadow: 0 2px 0 var(--rule), 0 8px 14px -10px rgba(0,0,0,.35);
+  transition: transform .08s, box-shadow .08s;
 }
-.key:hover { background: var(--diag-tint); }
-.key[aria-pressed="true"] { background: var(--pick); color: var(--pick-ink); }
-.key.seven { border-color: var(--diag); color: var(--diag); }
-.key.seven[aria-pressed="true"] { background: var(--diag); color: var(--pick-ink); }
+.key:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 0 0 var(--rule); }
+.key.seven { color: var(--diag); border-color: var(--diag); box-shadow: 0 2px 0 var(--diag), 0 8px 14px -10px rgba(0,0,0,.35); }
+.key[aria-pressed="true"] { background: var(--pick); color: var(--pick-ink); border-color: var(--pick); transform: translateY(-3px); box-shadow: 0 5px 0 var(--ink-soft), 0 12px 16px -10px rgba(0,0,0,.35); }
+.key.seven[aria-pressed="true"] { background: var(--diag); border-color: var(--diag); }
+.key.undo { font: 500 .85rem var(--font-body); color: var(--ink-soft); background: transparent; border-style: dashed; box-shadow: none; }
+.key.undo:hover:not(:disabled) { color: var(--ink); border-color: var(--ink); }
+.key.undo:active:not(:disabled) { transform: translateY(1px); }
 .key:disabled { opacity: .35; cursor: default; }
-.tools { display: flex; gap: 8px; flex-wrap: wrap; }
-.tools button {
-  font: 500 .85rem var(--font-body); color: var(--ink); background: transparent; border: 1.5px solid var(--rule);
-  border-radius: 3px; padding: 5px 11px; cursor: pointer;
+.clear {
+  font: 500 .8rem var(--font-body); color: var(--ink); background: transparent; border: 1.5px solid var(--rule);
+  border-radius: 3px; padding: 3px 9px; cursor: pointer; flex-shrink: 0;
 }
-.tools button:hover:not(:disabled) { border-color: var(--ink); }
-.tools button:disabled { opacity: .4; cursor: default; }
-.note { margin: 16px auto 0; max-width: 34rem; font-size: .8rem; color: var(--ink-soft); }
-.note b { color: var(--ink); font-weight: 500; }
+.clear:hover { border-color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { .key { transition: none; } }
 @media (max-width: 440px) { .res small { display: none; } }
 </style>
 </head>
@@ -128,16 +130,11 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
   <div class="pad">
     <div class="prompt">
       <p id="prompt"></p>
-      <div class="tools">
-        <button id="undo" type="button">Undo last</button>
-        <button id="clear" type="button">Clear sheet</button>
-      </div>
+      <button class="clear" id="clear" type="button">Clear</button>
     </div>
     <div class="keys" id="keys" role="group" aria-label="Dice result"></div>
   </div>
 </div>
-
-<p class="note">Tap the sum that was thrown, then tap a cell to write it there. Tap a filled cell to pick its number up again and move it. A line is scored once its five cells are filled. Dashed fields are the main diagonals and count double. <a href="../">All tools</a></p>
 
 <script>
 (function () {
@@ -158,7 +155,7 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
     v.forEach(function (x) { cnt[x] = (cnt[x] || 0) + 1; });
     var key = Object.keys(cnt).map(function (k) { return cnt[k]; }).sort(function (a, b) { return b - a; }).join('');
     if (key === '5') return { p: 10, n: 'Five alike' };
-    if (key === '41') return { p: 8, n: 'Four alike' };
+    if (key === '41') return { p: 6, n: 'Four alike' };
     if (key === '32') return { p: 8, n: 'Full house' };
     if (key === '11111') {
       var s = v.slice().sort(function (a, b) { return a - b; });
@@ -203,6 +200,9 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
     k.setAttribute('aria-pressed', 'false');
     keysEl.appendChild(k); keyBtns[n] = k;
   }
+  var undoBtn = document.createElement('button');
+  undoBtn.type = 'button'; undoBtn.id = 'undo'; undoBtn.className = 'key undo'; undoBtn.textContent = 'Undo';
+  keysEl.appendChild(undoBtn);
 
   function render() {
     var total = 0, filled = history.length, done = filled === 25;
@@ -243,12 +243,12 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
       keyBtns[m].setAttribute('aria-pressed', String(pending === m));
       keyBtns[m].disabled = done && pending == null;
     }
-    document.getElementById('undo').disabled = history.length === 0;
+    undoBtn.disabled = history.length === 0;
   }
 
   keysEl.addEventListener('click', function (e) {
     var t = e.target.closest('.key');
-    if (!t) return;
+    if (!t || !t.dataset.n) return;
     var v = parseInt(t.dataset.n, 10);
     pending = pending === v ? null : v;
     render();
@@ -270,7 +270,7 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
     render();
   });
 
-  document.getElementById('undo').addEventListener('click', function () {
+  undoBtn.addEventListener('click', function () {
     var i = history.pop();
     if (i != null) cells[i] = null;
     pending = null;
