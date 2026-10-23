@@ -14,10 +14,16 @@ export function pack(desc) {
   const pwd = one(/a=ice-pwd:(\S+)/);
   const fp = one(/a=fingerprint:sha-256 (\S+)/i);
   if (!ufrag || !pwd || !fp) throw new Error("Unexpected session description");
-  const cands = [...sdp.matchAll(/a=candidate:\S+ 1 udp \d+ (\S+) (\d+) typ host/gi)]
-    .filter((m) => !m[1].includes(":"))
-    .map((m) => `${m[1]}:${m[2]}`);
-  if (!cands.length) throw new Error("No local network address found. Is this device connected to the hotspot?");
+  const seen = [...sdp.matchAll(/a=candidate:\S+ 1 (\w+) \d+ (\S+) (\d+) typ (\w+)/gi)]
+    .map((m) => ({ proto: m[1].toLowerCase(), ip: m[2], port: m[3], type: m[4].toLowerCase() }));
+  // UDP host candidates only. IPv4 first; IPv6 is a fallback, and link-local addresses never route.
+  const usable = seen.filter((c) => c.proto === "udp" && c.type === "host" && !/^fe80/i.test(c.ip));
+  const cands = [...usable.filter((c) => !c.ip.includes(":")), ...usable.filter((c) => c.ip.includes(":")).slice(0, 2)]
+    .map((c) => `${c.ip}:${c.port}`);
+  if (!cands.length) {
+    const found = seen.length ? seen.map((c) => `${c.proto} ${c.type} ${c.ip}`).join(", ") : "no candidates at all";
+    throw new Error(`No usable network address found (browser offered: ${found}). Is this device connected to the hotspot?`);
+  }
   const fpB64 = toB64(fp.split(":").map((h) => parseInt(h, 16)));
   return ["KR1", desc.type === "offer" ? "o" : "a", ufrag, pwd, fpB64, cands.join(",")].join("~");
 }
