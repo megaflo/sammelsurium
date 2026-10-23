@@ -16,6 +16,12 @@ node scripts/build.mjs
 python3 -m http.server -d _site
 ```
 
+## Tests
+
+```sh
+node --test tests/
+```
+
 ## One-time setup
 
 In the repository settings under Pages, set the source to **GitHub Actions**.
