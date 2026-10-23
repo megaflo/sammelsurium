@@ -1,10 +1,11 @@
 import { newGame, addPlayer, startRound, apply, viewFor, rematch, gridSum, COLS, END_SCORE } from "./game.js";
-import { createInvite, acceptReply, joinWith } from "./net.js";
+import { createInvite, acceptReply, joinWith, addressesOf } from "./net.js";
 import { startScanner } from "./scanner.js";
 import qrcode from "./vendor/qrcode.mjs";
 
 const root = document.getElementById("app");
 const HOST_ID = "p0";
+const TIMEOUT = "Timed out. Are both devices on the same network? If an address shown on either screen ended in .local, allow the camera on both devices and start again.";
 
 // ---------- small helpers ----------
 function h(tag, attrs, ...kids) {
@@ -57,20 +58,48 @@ function codeInput(onCode, label) {
     if (stop) stop();
     onCode(code.trim());
   };
-  const video = h("video", { class: "cam", muted: true });
+  const video = h("video", { class: "cam" });
+  video.muted = true;
   const note = h("p", { class: "soft" }, "Starting camera…");
+  const retry = h("button", { hidden: true, onclick: () => start() }, "Try the camera again");
   const paste = h("textarea", { placeholder: "…or paste the code here", "aria-label": "Code" });
   const go = h("button", { onclick: () => paste.value.trim() && give(paste.value) }, label);
-  const box = h("div", {}, video, note, h("p", {}, paste), go);
-  startScanner(video, give).then((s) => {
-    if (handled) s(); else { stop = s; note.textContent = "Point the camera at the other screen."; }
-  }, () => {
-    video.hidden = true;
-    note.textContent = "No camera access. Paste the code instead.";
-  });
+  const box = h("div", {}, video, note, retry, h("p", {}, paste), go);
+  const start = () => {
+    retry.hidden = true;
+    video.hidden = false;
+    note.className = "soft";
+    note.textContent = "Starting camera…";
+    startScanner(video, give).then((s) => {
+      if (handled) s(); else { stop = s; note.textContent = "Point the camera at the other screen."; }
+    }, (e) => {
+      video.hidden = true;
+      retry.hidden = false;
+      note.className = "err";
+      note.textContent = cameraProblem(e);
+    });
+  };
+  start();
   box.stop = () => { handled = true; if (stop) stop(); };
   box.reset = () => { handled = false; stop = null; };
   return box;
+}
+
+function cameraProblem(e) {
+  const why = !navigator.mediaDevices ? "this browser offers no camera access on this page" : `${e.name || "Error"}${e.message ? `: ${e.message}` : ""}`;
+  const hint = e.name === "NotAllowedError"
+    ? " Allow the camera for this site in the browser or phone settings (iPhone: Settings, then your browser, then Camera), or try another browser such as Safari."
+    : "";
+  return `Camera unavailable (${why}).${hint} You can paste the code below instead.`;
+}
+
+// Shows which addresses the code advertises. A ".local" name usually cannot be resolved on a hotspot.
+function addressNote(code) {
+  const addrs = addressesOf(code);
+  const hidden = addrs.length > 0 && addrs.every((a) => a.endsWith(".local"));
+  return h("p", { class: hidden ? "err" : "soft" },
+    `This device offers: ${addrs.join(", ")}.`,
+    hidden ? " Only a hidden .local name is shared, so the other device may not find this one. Allow the camera for this site and try again." : "");
 }
 
 function codeOutput(code) {
@@ -80,7 +109,7 @@ function codeOutput(code) {
       try { await navigator.clipboard.writeText(code); toast("Copied"); } catch { ta.select(); toast("Select and copy the text"); }
     },
   }, "Copy as text");
-  return h("div", {}, qrSvg(code), copy, h("details", {}, h("summary", { class: "soft" }, "Show text code"), ta));
+  return h("div", {}, qrSvg(code), addressNote(code), copy, h("details", {}, h("summary", { class: "soft" }, "Show text code"), ta));
 }
 
 // ---------- app state ----------
@@ -224,7 +253,7 @@ async function openInvite(box, pid) {
       box.querySelector("[data-step]").replaceChildren(h("p", {}, "Connecting…"));
       try {
         await acceptReply(inv, code);
-        const ch = await Promise.race([inv.ready, new Promise((_, rej) => setTimeout(() => rej(new Error("Timed out. Are both devices on the same network?")), 20000))]);
+        const ch = await Promise.race([inv.ready, new Promise((_, rej) => setTimeout(() => rej(new Error(TIMEOUT)), 20000))]);
         adopt(ch, seat);
         close();
       } catch (e) { failed(e.message); }
@@ -291,7 +320,7 @@ function runJoin(box, done) {
         h("h2", {}, "Show this to the host"),
         h("p", { class: "soft" }, "The host scans this code with “Next: scan their reply”."),
         codeOutput(join.code)));
-      const ch = await Promise.race([join.ready, new Promise((_, rej) => setTimeout(() => rej(new Error("Timed out. Are both devices on the same network?")), 60000))]);
+      const ch = await Promise.race([join.ready, new Promise((_, rej) => setTimeout(() => rej(new Error(TIMEOUT)), 60000))]);
       hostChannel = ch;
       ch.onmessage = onHostMessage;
       ch.onclose = () => { if (hostChannel === ch) { hostChannel = null; lost(); } };
