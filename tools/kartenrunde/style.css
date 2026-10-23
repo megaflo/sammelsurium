@@ -90,18 +90,17 @@ main.game { height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px
 .hand > .card { width: 3.8rem; font-size: 1.7rem; box-shadow: 0 6px 14px rgba(0,0,0,.28); transform: rotate(-3deg); flex: none; }
 .hand .side { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
 .hand .side .say { text-align: left; }
-.hand .or { font-size: .75rem; color: var(--soft); }
 .hand .side button { min-height: 40px; padding: 6px 10px; font-size: .85rem; text-align: left; }
-.arrow { text-align: center; color: var(--accent); line-height: 1; font-size: .8rem; margin-top: -4px; letter-spacing: .3em; }
 
 .mine-wrap { flex: 1; display: flex; min-height: 12rem; }
 .mine-box { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border: 2px solid var(--rule); border-radius: 12px; padding: 6px 8px 8px; }
 .mine-box.turn { border-color: var(--turn); }
 .mine-box .name { display: flex; justify-content: space-between; font-weight: 600; font-size: .85rem; margin-bottom: 5px; }
 .mine-box .name span:last-child { color: var(--soft); font-weight: 500; font-variant-numeric: tabular-nums; }
-.mine-box .grid { flex: 1; min-height: 0; grid-template-rows: repeat(3, minmax(0, 7.5rem)); align-content: center; gap: 5px; }
-.mine-box .card { aspect-ratio: auto; width: 100%; }
-.mine-box .card.empty, .mine-box .card.gone { min-height: 0; }
+.mine-box .grid { flex: 1; min-height: 0; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.mine-box .cell { container-type: size; display: grid; place-items: center; min-height: 0; }
+/* Cards keep their 5:7 shape and are as large as the cell allows. */
+.mine-box .card { width: auto; height: min(100cqh, 140cqw); aspect-ratio: 5 / 7; }
 
 /* Scores and round result: a sheet from the bottom edge */
 .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 20; }

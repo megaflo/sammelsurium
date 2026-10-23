@@ -495,7 +495,7 @@ function updateGame() {
       sub = v.discardTop === null ? "Draw a new card." : `Draw a new card, or take the ${v.discardTop} from the discard pile.`;
     } else if (v.stage === "holding") {
       title = `You ${v.heldFrom === "draw" ? "drew" : "took"} a ${v.held}`;
-      sub = "Tap a card below to swap it.";
+      sub = v.heldFrom === "draw" ? "Tap a card below to swap it, or discard it and flip a card." : "Tap a card below to swap it.";
     } else {
       title = "Flip a card";
       sub = "Tap one of your face-down cards.";
@@ -511,10 +511,10 @@ function updateGame() {
     body = h("div", { class: "hand" },
       h("div", { class: `card ${cls(v.held)}`, "aria-label": `Card in hand: ${v.held}` }, String(v.held)),
       h("div", { class: "side" }, text,
-        canDiscard ? [h("span", { class: "or" }, "or"), h("button", { onclick: () => act({ a: "discard" }) }, "Discard it, then flip a card")] : null));
+        canDiscard ? h("button", { onclick: () => act({ a: "discard" }) }, "Discard it") : null));
   }
   ui.dock.className = `dock${myTurn || (v.phase === "setup" && flipped < 2) ? " mine" : ""}`;
-  ui.dock.replaceChildren(...[track, body, myTurn && v.stage === "holding" ? h("div", { class: "arrow", "aria-hidden": "true" }, "▾ ▾ ▾") : null].filter(Boolean));
+  ui.dock.replaceChildren(...[track, body].filter(Boolean));
 
   // my grid
   const clickable = (c) => {
@@ -528,7 +528,7 @@ function updateGame() {
   const kind = v.phase === "play" && v.stage === "holding" ? "swap" : "flip";
   ui.mine.replaceChildren(h("div", { class: `mine-box${myTurn ? " turn" : ""}` },
     h("div", { class: "name" }, h("span", {}, "You"), h("span", {}, `${gridSum(me)} shown · total ${me.total}`)),
-    h("div", { class: "grid" }, me.grid.map((c, i) => cardEl(c, { pick: clickable(c), onclick: () => act({ a: kind, i }) })))));
+    h("div", { class: "grid" }, me.grid.map((c, i) => h("div", { class: "cell" }, cardEl(c, { pick: clickable(c), onclick: () => act({ a: kind, i }) }))))));
 
   // reconnect buttons (host) and the scores / round result sheet
   const away = role === "host" ? v.players.filter((p) => !p.connected) : [];
