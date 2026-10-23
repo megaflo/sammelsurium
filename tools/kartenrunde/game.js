@@ -26,7 +26,7 @@ export function shuffle(arr, rnd = Math.random) {
 
 export function newGame() {
   return { phase: "lobby", players: [], round: 0, draw: [], discard: [], turn: 0,
-    stage: "choose", held: null, heldFrom: null, closer: null, log: [], winner: null };
+    stage: "choose", held: null, heldFrom: null, closer: null, opener: null, log: [], winner: null };
 }
 
 export function addPlayer(g, id, name) {
@@ -48,6 +48,8 @@ export function startRound(g, rnd = Math.random) {
   g.stage = "choose";
   g.held = null;
   g.heldFrom = null;
+  // Whoever closed the previous round opens this one; the first round of a game has no opener.
+  g.opener = g.round > 1 ? g.closer : null;
   g.closer = null;
   g.turn = 0;
   g.winner = null;
@@ -115,12 +117,16 @@ function finishRound(g) {
 }
 
 function beginPlay(g) {
-  // Highest sum of the two revealed cards starts; ties go to the earlier seat.
-  let best = -Infinity;
-  g.players.forEach((p, i) => {
-    const s = gridSum(p);
-    if (s > best) { best = s; g.turn = i; }
-  });
+  // The previous round's closer starts. In the first round the highest sum of the two
+  // revealed cards starts; ties go to the earlier seat.
+  if (g.opener !== null) g.turn = g.opener;
+  else {
+    let best = -Infinity;
+    g.players.forEach((p, i) => {
+      const s = gridSum(p);
+      if (s > best) { best = s; g.turn = i; }
+    });
+  }
   g.phase = "play";
   g.stage = "choose";
   g.log.push(`${g.players[g.turn].name} starts`);
