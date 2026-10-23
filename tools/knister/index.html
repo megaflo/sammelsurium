@@ -277,6 +277,7 @@ button:focus-visible { outline: 2.5px solid var(--diag); outline-offset: 1px; }
     render();
   });
   document.getElementById('clear').addEventListener('click', function () {
+    if (!confirm('Clear the whole score card?')) return;
     cells = new Array(25).fill(null); history = []; pending = null; render();
   });
 
