@@ -1,12 +1,8 @@
-// Kartenrunde, animated mock. The rules (game.js) and the computer players (bot.js) are the real
-// ones; you play one seat against bots on this device. Only the presentation is new: cards travel
-// between piles and grids, flips are real flips, and opponent turns are narrated step by step.
-import { newGame, addPlayer, startRound, apply, viewFor, rematch, gridSum, COLS, ROWS, END_SCORE } from "../kartenrunde/game.js";
-import { botMove } from "../kartenrunde/bot.js";
+// The game table: persistent screen, animations and narration. It never reads the game state. It gets
+// a masked view plus the events of the last action from the host (see apply in game.js), shows what
+// happened as moving cards, and falls back to just showing the view when it missed a message.
+import { gridSum, COLS, ROWS, END_SCORE } from "./game.js";
 
-const ME = "p0";
-const BOT_NAMES = ["Mira", "Jonas", "Lena", "Tom", "Nora", "Ole", "Pia"];
-const SPEEDS = { slow: 1.7, normal: 1, fast: 0.55, off: 0 };
 const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ---------- helpers ----------
@@ -30,26 +26,24 @@ const pos = (i) => `row ${Math.floor(i / COLS) + 1}, col ${(i % COLS) + 1}`;
 const rect = (el) => el.getBoundingClientRect();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// ---------- settings ----------
-const settings = {
-  speed: store.get("kr-mock-speed") || (reduced ? "off" : "normal"),
-  bots: Number(store.get("kr-mock-bots")) || 3,
-};
-if (!(settings.speed in SPEEDS)) settings.speed = "normal";
-const turbo = new URLSearchParams(location.search).has("turbo"); // ?turbo skips every wait, for testing
-const K = () => (turbo ? 0 : SPEEDS[settings.speed]);
-const pause = (ms) => wait(turbo ? 0 : settings.speed === "off" ? Math.min(ms, 120) : ms * K());
-const applySpeed = () => document.documentElement.style.setProperty("--k", String(K()));
+// ---------- motion ----------
+// Animations default to on unless the system asks for reduced motion. Without them the narration stays.
+const motion = { on: (store.get("kartenrunde-motion") || (reduced ? "off" : "on")) === "on" };
+const K = () => (motion.on ? 1 : 0);
+const applyMotion = () => document.documentElement.style.setProperty("--k", String(K()));
+const pause = (ms) => wait(motion.on ? ms : Math.min(ms, 120));
 
 // ---------- state ----------
-let game = null; // the real game state; this device is the host
-let scene = null; // what is on screen right now (a masked view plus the card under the discard top)
-let matchGen = 0; // bumped on restart so stale async work can bail out
-let inflight = 0; // > 0 while an action is animating
+let cfg = null; // { act(a), toast(msg), isHost, onPaint(view) }
+let me = null; // id of the local player
+let mountGen = 0; // bumped on every mount so stale async work can bail out
+let scene = null; // the view on screen, plus the card under the discard top
+let inflight = 0; // > 0 while a message is being played
+let waiting = 0; // messages queued behind the one being played
+let awaiting = false; // an action was sent and its answer has not arrived
 let dealing = false; // the round is being dealt
-let driving = false;
-let autopilot = false;
-let thinking = null; // id of the player the table is waiting for
+let thinkOn = false; // nothing moved for a moment: the player whose turn it is is thinking
+let thinkTimer = null;
 let sheet = null; // { k: "scores" | "log" | "results" }
 let announce = null; // { pid, head, sub }: latest narrated step
 let status = {}; // pid -> short text under the board
@@ -57,15 +51,11 @@ let recent = {}; // pid -> Set of cell indices touched in that player's last tur
 let turns = []; // turn records for the log
 let lastTurn = null;
 let chain = Promise.resolve();
-const els = {};
+let sid = null; // host session of the last message
+let seen = 0; // sequence number of the last message
+let els = {};
 const boards = new Map(); // pid -> board parts
-const exclusive = (fn) => { const r = chain.then(fn); chain = r.catch(() => {}); return r; };
 const nameOf = (pid) => scene.players.find((p) => p.id === pid).name;
-
-// What the host sends the local player: the masked view of the game.
-function makeScene() {
-  return structuredClone(viewFor(game, ME));
-}
 
 // ---------- card elements ----------
 function cardNode(extra = "") {
@@ -146,14 +136,6 @@ function flash(text) {
   void els.flash.offsetWidth;
   els.flash.classList.add("show");
 }
-let toastTimer;
-function toast(msg) {
-  els.toast.textContent = msg;
-  els.toast.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => els.toast.classList.remove("show"), 2400);
-}
-
 // ---------- building the screen ----------
 function makeGrid(interactive) {
   const cells = Array.from({ length: COLS * ROWS }, (_, i) => {
@@ -170,21 +152,22 @@ function makeBoard(p, mine) {
   const suffix = h("span", {});
   const sumwrap = h("span", { class: "sumwrap" }, num, suffix);
   const tag = h("span", { class: "tag", hidden: true }, "Your turn");
-  const nm = h("span", { class: "nm" }, p.name);
+  const away = h("span", { class: "dot off", hidden: true, title: "disconnected" });
+  const nm = h("span", { class: "nm" }, away, p.name);
   const status = h("div", { class: "status" });
   const box = mine
     ? h("div", { class: "mine-box" }, h("div", { class: "name" }, h("span", {}, nm, tag), sumwrap), g.grid)
     : h("div", { class: "other" },
       h("div", { class: "name" }, nm, sumwrap), g.grid, status);
-  return { box, cells: g.cells, num, suffix, sumwrap, tag, status, shown: null, mine };
+  return { box, cells: g.cells, num, suffix, sumwrap, tag, status, away, shown: null, mine };
 }
 
 function build(view) {
-  const phone = document.getElementById("phone");
   boards.clear();
-  const [me, ...others] = view.players;
-  const mine = makeBoard(me, true);
-  boards.set(me.id, mine);
+  const mineP = view.players.find((p) => p.id === me);
+  const others = view.players.filter((p) => p.id !== me);
+  const mine = makeBoard(mineP, true);
+  boards.set(me, mine);
   const otherBoards = others.map((p) => { const b = makeBoard(p, false); boards.set(p.id, b); return b; });
 
   els.bar = h("div", { class: "bar" });
@@ -217,11 +200,12 @@ function build(view) {
   els.dock = h("div", { class: "dock" }, els.say, els.actions);
 
   els.mine = h("div", { class: "mine-wrap" }, mine.box);
+  els.overlay = h("div", { class: "away" });
+  els.invite = h("div", { class: "invite" });
   els.sheet = h("div");
-  els.toast = h("div", { id: "toast", role: "status" });
-  phone.replaceChildren(h("div", { class: "game" }, els.bar, els.others, els.table, els.dock, els.mine), els.sheet, els.toast);
   els.fx = document.getElementById("fx");
   els.fx.replaceChildren();
+  root.replaceChildren(els.bar, els.overlay, els.others, els.table, els.dock, els.mine, els.invite, els.sheet);
 }
 
 // ---------- painting ----------
@@ -252,19 +236,19 @@ function setNum(b, n, float, freeze) {
 function paint(sc, { freezeSums = false } = {}) {
   scene = sc;
   const v = sc;
-  const meIdx = 0;
+  const meIdx = v.players.findIndex((p) => p.id === me);
   const myTurn = v.phase === "play" && v.turn === meIdx;
-  const idle = inflight === 0;
+  const idle = inflight === 0 && !awaiting;
+  const thinkingId = thinkOn && v.phase === "play" && !myTurn ? v.players[v.turn].id : null;
   const ended = v.phase === "roundEnd" || v.phase === "gameEnd";
 
   // bar
   const closer = v.closer !== null && v.phase === "play" ? v.players[v.closer] : null;
   els.bar.replaceChildren(
     h("strong", {}, `Round ${v.round}`),
-    h("span", { class: `chip${closer ? "" : " off"}` }, closer ? `${closer.id === ME ? "You are" : `${closer.name} is`} out · last turns` : "-"),
+    h("span", { class: `chip${closer ? "" : " off"}` }, closer ? `${closer.id === me ? "You are" : `${closer.name} is`} out · last turns` : "-"),
     h("button", { onclick: () => openSheet({ k: "log" }) }, "Log"),
-    h("button", { onclick: () => openSheet(ended ? { k: "results" } : { k: "scores" }) }, ended ? "Results" : "Scores"),
-    h("button", { class: "gear", onclick: () => document.body.classList.add("show-mock"), "aria-label": "Mock settings" }, "⚙"));
+    h("button", { onclick: () => openSheet(ended ? { k: "results" } : { k: "scores" }) }, ended ? "Results" : "Scores"));
 
   // boards
   v.players.forEach((p, i) => {
@@ -276,9 +260,10 @@ function paint(sc, { freezeSums = false } = {}) {
       b.suffix.textContent = ` shown · total ${p.total}`;
       b.tag.hidden = !isTurn;
     } else {
-      const dots = thinking === p.id && v.phase === "play" ? h("span", { class: "dots" }, "thinking ", h("i"), h("i"), h("i")) : null;
+      const dots = thinkingId === p.id ? h("span", { class: "dots" }, "thinking ", h("i"), h("i"), h("i")) : null;
       b.status.replaceChildren(...(dots ? [dots] : [status[p.id] || (v.phase === "setup" ? "" : "")]));
     }
+    b.away.hidden = p.connected !== false;
     const flipped = p.grid.filter((c) => c && c.up).length;
     p.grid.forEach((c, k) => {
       const cell = b.cells[k];
@@ -286,7 +271,7 @@ function paint(sc, { freezeSums = false } = {}) {
       cell.card.classList.toggle("recent", !b.mine && c !== null && !!recent[p.id] && recent[p.id].has(k));
       if (b.mine) {
         let pick = false;
-        if (c && (idle || (v.phase === "setup" && !dealing))) {
+        if (c && (idle || (v.phase === "setup" && !dealing && !awaiting))) {
           if (v.phase === "setup") pick = !c.up && flipped < 2;
           else if (myTurn) pick = v.stage === "holding" ? v.held !== null : v.stage === "flip" ? !c.up : false;
         }
@@ -322,18 +307,19 @@ function paint(sc, { freezeSums = false } = {}) {
   const turnKey = v.phase === "play" ? v.turn : null;
   if (turnKey === meIdx && lastTurn !== meIdx && idle) {
     for (const el of [els.drawPile, els.discardPile]) { el.classList.remove("nudge"); void el.offsetWidth; el.classList.add("nudge"); }
-    const mb = boards.get(ME).box;
+    const mb = boards.get(me).box;
     mb.classList.remove("nudge"); void mb.offsetWidth; mb.classList.add("nudge");
   }
   if (idle || turnKey !== meIdx) lastTurn = turnKey;
 
-  paintDock(v, myTurn, holding);
+  paintDock(v, myTurn, holding, thinkingId);
   paintSheet();
+  if (cfg.onPaint) cfg.onPaint(v);
 }
 
-function paintDock(v, myTurn, holding) {
-  const me = v.players[0];
-  const flipped = me.grid.filter((c) => c && c.up).length;
+function paintDock(v, myTurn, holding, thinkingId) {
+  const mine = v.players.find((p) => p.id === me);
+  const flipped = mine.grid.filter((c) => c && c.up).length;
   let head = "", sub = "";
   let ofOther = false;
   let actions = [];
@@ -341,11 +327,11 @@ function paintDock(v, myTurn, holding) {
   if (v.phase === "setup") {
     if (flipped < 2) { head = "Flip two of your cards"; sub = `${flipped} of 2 flipped. Tap a face-down card.`; }
     else {
-      const waiting = v.players.filter((p, i) => i > 0 && p.grid.filter((c) => c && c.up).length < 2).map((p) => p.name);
+      const waiting = v.players.filter((p) => p.id !== me && p.grid.filter((c) => c && c.up).length < 2).map((p) => p.name);
       head = "Waiting for the others"; sub = waiting.length ? `${waiting.join(", ")} still flipping` : "";
     }
   } else if (v.phase === "play" && myTurn) {
-    if (inflight) { head = "…"; }
+    if (inflight || awaiting) { head = "…"; }
     else if (v.stage === "choose") { head = "Your turn"; sub = v.discardTop === null ? "Draw a card" : `Draw a card or take the ${v.discardTop}`; }
     else if (v.stage === "flip") { head = "Flip a card"; sub = "Tap one of your face-down cards"; }
     else if (holding) {
@@ -356,10 +342,10 @@ function paintDock(v, myTurn, holding) {
     } else head = "…";
   } else if (v.phase === "play") {
     ofOther = true;
-    if (thinking === cur.id) head = `${cur.name} is thinking…`;
+    if (thinkingId === cur.id) head = `${cur.name} is thinking…${cur.connected === false ? " (disconnected)" : ""}`;
     else if (announce && announce.pid === cur.id) { head = announce.head; sub = announce.sub; }
     else head = `${cur.name}'s turn`;
-    if (!sub && thinking === cur.id) {
+    if (!sub && thinkingId === cur.id) {
       if (v.stage === "choose" && status[cur.id]) sub = `last turn: ${status[cur.id]}`;
       else if (v.stage === "holding" && v.held !== null) sub = `holding a ${v.held}, picking a spot`;
       else if (v.stage === "flip") sub = "picking a card to flip";
@@ -399,8 +385,8 @@ function scoreTable(v, { animate = false } = {}) {
       requestAnimationFrame(step);
     }
     const doubled = ended && v.doubled && v.closer !== null && v.players[v.closer].id === p.id;
-    return h("tr", { class: `${p.id === ME ? "me" : ""}${ended && p.rounds[last] === lowest ? " best" : ""}${v.phase === "gameEnd" && v.winner && v.winner.includes(p.id) ? " win" : ""}` },
-      h("td", {}, p.id === ME ? "You" : p.name),
+    return h("tr", { class: `${p.id === me ? "me" : ""}${ended && p.rounds[last] === lowest ? " best" : ""}${v.phase === "gameEnd" && v.winner && v.winner.includes(p.id) ? " win" : ""}` },
+      h("td", {}, p.id === me ? "You" : p.name),
       Array.from({ length: rounds }, (_, i) => h("td", {}, p.rounds[i] === undefined ? "" : String(p.rounds[i]), i === last && doubled ? h("span", { class: "x2" }, "×2") : null)),
       total);
   });
@@ -408,8 +394,9 @@ function scoreTable(v, { animate = false } = {}) {
 }
 
 function scoresSheet() {
+  const motionBtn = h("button", { onclick: () => { motion.on = !motion.on; store.set("kartenrunde-motion", motion.on ? "on" : "off"); applyMotion(); paintSheet(); } }, `Animations: ${motion.on ? "on" : "off"}`);
   return [h("h2", {}, "Scores"), scoreTable(scene), h("p", { class: "note" }, `The game ends when someone reaches ${END_SCORE} points.`),
-    h("button", { class: "primary", onclick: closeSheet }, "Close")];
+    h("div", { class: "row" }, h("button", { class: "primary grow", onclick: closeSheet }, "Close"), motionBtn)];
 }
 
 function resultsSheet() {
@@ -422,12 +409,14 @@ function resultsSheet() {
   const parts = [h("h2", {}, over ? "Game over" : `Round ${v.round} finished`)];
   if (over) parts.push(h("p", { class: "note" }, `Winner: ${v.winner.map((id) => v.players.find((p) => p.id === id).name).join(", ")} with ${Math.min(...v.players.map((p) => p.total))} points.`));
   parts.push(h("p", { class: "note" },
-    c ? `${c.id === ME ? "You" : c.name} ended the round${v.doubled ? " without the lowest score, so those points are doubled." : "."} ` : "",
-    `Lowest this round: ${v.players.filter((p) => p.rounds[last] === lowest).map((p) => (p.id === ME ? "You" : p.name)).join(", ")} (${lowest}).`));
+    c ? `${c.id === me ? "You" : c.name} ended the round${v.doubled ? " without the lowest score, so those points are doubled." : "."} ` : "",
+    `Lowest this round: ${v.players.filter((p) => p.rounds[last] === lowest).map((p) => (p.id === me ? "You" : p.name)).join(", ")} (${lowest}).`));
   parts.push(scoreTable(v, { animate: !sheet.shown }));
   sheet.shown = true;
   parts.push(h("div", { class: "row" },
-    h("button", { class: "primary grow", onclick: () => { closeSheet(); perform(ME, { a: over ? "rematch" : "next" }).then(kick); } }, over ? "Play again" : "Next round"),
+    cfg.isHost
+      ? h("button", { class: "primary grow", onclick: () => { closeSheet(); cfg.act({ a: over ? "rematch" : "next" }); } }, over ? "Play again" : "Next round")
+      : h("p", { class: "soft grow" }, "Waiting for the host…"),
     h("button", { onclick: closeSheet }, "Show cards")));
   return parts;
 }
@@ -437,53 +426,10 @@ function logSheet() {
   let round = null;
   for (const t of [...turns].reverse()) {
     if (t.round !== round) { round = t.round; items.push(h("h3", {}, `Round ${round}`)); }
-    const me = t.pid === ME;
-    items.push(h("li", { class: "t" }, h("span", { class: `av${me ? " me" : ""}` }, nameOf(t.pid)[0]), h("span", {}, h("b", {}, me ? "You" : nameOf(t.pid)), " ", t.steps.join(" → "))));
+    const mine = t.pid === me;
+    items.push(h("li", { class: "t" }, h("span", { class: `av${mine ? " me" : ""}` }, nameOf(t.pid)[0]), h("span", {}, h("b", {}, mine ? "You" : nameOf(t.pid)), " ", t.steps.join(" → "))));
   }
   return [h("h2", {}, "What happened"), items.length ? h("ul", { class: "loglist" }, items) : h("p", { class: "note" }, "Nothing yet."), h("button", { class: "primary", onclick: closeSheet }, "Close")];
-}
-
-// ---------- host side and client side ----------
-// The host applies an action to the game and sends everyone the new view plus the events the action
-// caused. This mock has one client, the local player, which gets each message through receive() the
-// way a guest would: it knows only the masked view and the events, never the game state.
-let seq = 0; // host: number of the last message sent
-let seen = 0; // client: number of the last message shown
-
-function perform(pid, act) {
-  return exclusive(async () => {
-    const gen = matchGen;
-    let events;
-    try { events = act.a === "rematch" ? rematch(game) : apply(game, pid, act); }
-    catch (e) { toast(e.message); return false; }
-    inflight++;
-    paint(scene);
-    try { return await receive({ seq: ++seq, view: makeScene(), events }); }
-    finally { if (gen === matchGen) { inflight--; paint(scene); } }
-  });
-}
-
-// The card under the discard top is not part of the view; the client remembers it from the events.
-function deriveUnder(prev, ev) {
-  let under = prev.under ?? null;
-  for (const e of ev) {
-    if (e.t === "take" || e.t === "reshuffle") under = null;
-    else if (e.t === "swap" || e.t === "discard") under = prev.discardTop;
-    else if (e.t === "clear") under = e.v;
-  }
-  return under;
-}
-
-async function receive(msg) {
-  const gen = matchGen;
-  const next = structuredClone(msg.view);
-  const inSync = msg.seq === seen + 1;
-  seen = msg.seq;
-  if (msg.events.some((e) => e.t === "deal")) { next.under = null; await dealRound(next); return true; }
-  if (!inSync) { next.under = null; paint(next); return true; } // missed a message: show the state, skip the show
-  next.under = deriveUnder(scene, msg.events);
-  await playEvents(scene, next, msg.events, gen);
-  return true;
 }
 
 async function playEvents(prev, next, ev, gen) {
@@ -492,7 +438,7 @@ async function playEvents(prev, next, ev, gen) {
   if (ev.some((e) => e.t === "reshuffle")) flash("Discard pile reshuffled");
   const pid = main.pid;
   const pi = prev.players.findIndex((p) => p.id === pid);
-  const who = pid === ME ? "You" : prev.players[pi].name;
+  const who = pid === me ? "You" : prev.players[pi].name;
 
   if (prev.phase === "setup") {
     recent[pid] = new Set();
@@ -504,7 +450,7 @@ async function playEvents(prev, next, ev, gen) {
     const start = ev.find((e) => e.t === "play");
     if (start) {
       announce = null;
-      flash(start.pid === ME ? "You start" : `${nameOf(start.pid)} starts`);
+      flash(start.pid === me ? "You start" : `${nameOf(start.pid)} starts`);
       prev.players.forEach((p) => { status[p.id] = ""; });
     }
     await pause(start ? 500 : 260);
@@ -520,7 +466,7 @@ async function playEvents(prev, next, ev, gen) {
     say(pid, drew ? `drew ${main.v}` : `took ${main.v}`, `${who} ${drew ? "drew" : "took"} ${drew ? "a" : "the"} ${main.v}`, drew ? "from the draw pile" : "from the discard pile");
     paint(next);
     await fly({ from, to: rect(els.handCard), v: main.v, startUp: !drew, flip: drew, who: pid });
-    if (gen !== matchGen) return;
+    if (gen !== mountGen) return;
     rel();
     pop(els.handCard);
     return;
@@ -533,7 +479,7 @@ async function playEvents(prev, next, ev, gen) {
     say(pid, `discarded ${main.v}`, `${who} discarded the ${main.v}`, "and flips a card");
     paint(next);
     await fly({ from, to: rect(els.discardTop), v: main.v, startUp: true, who: pid });
-    if (gen !== matchGen) return;
+    if (gen !== mountGen) return;
     rel();
     pop(els.discardTop);
     return;
@@ -560,7 +506,7 @@ async function playEvents(prev, next, ev, gen) {
       fly({ from: fromHand, to: fromCell, v: placed, startUp: true, who: pid }),
       fly({ from: fromCell, to: toDiscard, v: replaced, startUp: wasUp, flip: !wasUp, delay: 40, who: pid }),
     ]);
-    if (gen !== matchGen) return;
+    if (gen !== mountGen) return;
     relCard(); relTop();
     pop(card);
     await settle(next, ev, null, pid, who);
@@ -576,7 +522,7 @@ async function playEvents(prev, next, ev, gen) {
 
 // Brings the screen to the state after the action: columns being cleared, the closer, the round reveal.
 async function settle(next, ev, flipped, pid, who) {
-  const gen = matchGen;
+  const gen = mountGen;
   const pi = next.players.findIndex((p) => p.id === pid);
   const clears = ev.filter((e) => e.t === "clear");
   const justClosed = ev.some((e) => e.t === "close");
@@ -590,7 +536,7 @@ async function settle(next, ev, flipped, pid, who) {
       paint(s1, { freezeSums: true });
       await pause(560);
     } else await pause(320);
-    if (gen !== matchGen) return;
+    if (gen !== mountGen) return;
     const flights = [];
     const rel = ghost(els.discardTop);
     for (const c of clears) {
@@ -601,7 +547,7 @@ async function settle(next, ev, flipped, pid, who) {
     paint(next);
     flash(`${who} cleared a column of ${clears[0].v}!`);
     await Promise.all(flights.map((f, n) => fly({ from: f.rect, to: rect(els.discardTop), v: f.v, startUp: true, delay: n * 110, dur: 420, who: pid })));
-    if (gen !== matchGen) return;
+    if (gen !== mountGen) return;
     rel();
     pop(els.discardTop);
   } else paint(next);
@@ -613,9 +559,7 @@ async function settle(next, ev, flipped, pid, who) {
   if (ending) {
     await pause(reveal + 700);
     for (const b of boards.values()) b.cells.forEach((c) => c.card.style.removeProperty("--delay"));
-    if (gen !== matchGen) return;
-    autopilot = false;
-    syncControls();
+    if (gen !== mountGen) return;
     sheet = { k: "results" };
     paintSheet();
   }
@@ -639,13 +583,12 @@ function revealDelays(next, ending) {
 
 // New round: every card is dealt from the draw pile, then the first discard is turned over.
 async function dealRound(sc) {
-  const gen = matchGen;
+  const gen = mountGen;
   dealing = true;
   sheet = null;
   announce = null;
   status = {};
   recent = {};
-  thinking = null;
   lastTurn = null;
   const rels = [];
   const targets = [];
@@ -659,133 +602,126 @@ async function dealRound(sc) {
   paint(sc);
   if (K()) {
     const from = rect(els.drawTop);
-    const flights = targets.map((card, n) => fly({ from, to: rect(card), v: 0, startUp: false, delay: n * 26, dur: 380 }).then(() => { if (gen === matchGen) rels[n](); }));
+    const flights = targets.map((card, n) => fly({ from, to: rect(card), v: 0, startUp: false, delay: n * 26, dur: 380 }).then(() => { if (gen === mountGen) rels[n](); }));
     flights.push(fly({ from, to: rect(els.discardTop), v: sc.discardTop, startUp: false, flip: true, delay: targets.length * 26 + 80, dur: 460 }).then(() => relTop()));
     await Promise.all(flights);
   } else { rels.forEach((r) => r()); relTop(); }
-  if (gen !== matchGen) return;
+  if (gen !== mountGen) return;
   for (const card of targets) card.classList.remove("noanim");
   dealing = false;
   paint(sc);
 }
 
+
+// ---------- messages ----------
+// The card under the discard top is not part of the view; the table remembers it from the events.
+function deriveUnder(prev, ev) {
+  let under = prev.under ?? null;
+  for (const e of ev) {
+    if (e.t === "take" || e.t === "reshuffle") under = null;
+    else if (e.t === "swap" || e.t === "discard") under = prev.discardTop;
+    else if (e.t === "clear") under = e.v;
+  }
+  return under;
+}
+
+function showState(next) {
+  next.under = next.under ?? null;
+  paint(next);
+  if (next.phase === "roundEnd" || next.phase === "gameEnd") { sheet = { k: "results" }; paintSheet(); }
+}
+
+async function play(msg, behind) {
+  const gen = mountGen;
+  const next = structuredClone(msg.v);
+  const ev = msg.events || [];
+  const inSync = msg.sid === sid && msg.seq === seen + 1;
+  sid = msg.sid;
+  seen = msg.seq;
+  if (ev.some((e) => e.t === "deal")) {
+    next.under = null;
+    if (behind) showState(next); else await dealRound(next);
+    return;
+  }
+  if (!inSync || !scene || behind) { next.under = null; showState(next); return; }
+  next.under = deriveUnder(scene, ev);
+  await playEvents(scene, next, ev, gen);
+}
+
+async function run(msg) {
+  const gen = mountGen;
+  const behind = --waiting > 0; // more messages are queued: skip the show and catch up
+  inflight++;
+  awaiting = false;
+  thinkOn = false;
+  clearTimeout(thinkTimer);
+  try { await play(msg, behind); }
+  catch (e) {
+    console.error(e);
+    for (const el of root.querySelectorAll(".ghost, .noanim")) el.classList.remove("ghost", "noanim");
+    els.fx.replaceChildren();
+    const next = structuredClone(msg.v);
+    next.under = null;
+    showState(next);
+  } finally {
+    if (gen === mountGen) {
+      inflight--;
+      paint(scene);
+      thinkTimer = setTimeout(() => { thinkOn = true; if (!inflight && !waiting) paint(scene); }, motion.on ? 650 : 200);
+    }
+  }
+}
+
+function receive(msg) {
+  waiting++;
+  const r = chain.then(() => run(msg));
+  chain = r.catch(() => {});
+  return r;
+}
+
+// Resolves once every queued message has been shown.
+function idle() {
+  const c = chain;
+  return c.then(() => (c === chain ? undefined : idle()));
+}
+
 // ---------- input ----------
 function onCell(i) {
   const sc = scene;
-  if (sc.phase === "setup") { if (!dealing) perform(ME, { a: "flip", i }).then(kick); return; }
+  if (awaiting) return;
+  if (sc.phase === "setup") { if (!dealing) cfg.act({ a: "flip", i }); return; }
   if (inflight) return;
-  if (sc.phase !== "play" || sc.turn !== 0) return;
-  perform(ME, { a: sc.stage === "holding" ? "swap" : "flip", i }).then(kick);
+  if (sc.phase !== "play" || sc.players[sc.turn].id !== me) return;
+  send({ a: sc.stage === "holding" ? "swap" : "flip", i });
 }
-function onPile(a) {
-  if (inflight) return;
-  perform(ME, { a }).then(kick);
-}
-function onDiscard() {
-  if (inflight) return;
-  perform(ME, { a: "discard" }).then(kick);
-}
-
-// ---------- computer players ----------
-function nextActor() {
-  for (const p of game.players) {
-    if (p.id === ME && !autopilot) continue;
-    if (p.id !== ME && !p.bot) continue;
-    const mv = botMove(viewFor(game, p.id));
-    if (mv) return { p, mv };
-  }
-  return null;
-}
-const thinkTime = { setup: 330, choose: 800, holding: 650, flip: 450 };
-
-async function kick() {
-  if (driving) return;
-  driving = true;
-  const gen = matchGen;
-  try {
-    for (;;) {
-      if (gen !== matchGen) return;
-      const actor = nextActor();
-      if (!actor) break;
-      const v = viewFor(game, actor.p.id);
-      thinking = actor.p.id === ME || v.phase === "setup" ? null : actor.p.id;
-      paint(scene);
-      await pause(thinkTime[v.phase === "setup" ? "setup" : v.stage]);
-      if (gen !== matchGen) return;
-      thinking = null;
-      const mv = botMove(viewFor(game, actor.p.id));
-      if (!mv) continue;
-      await perform(actor.p.id, mv);
-      await pause(settings.speed === "off" ? 60 : 180);
-    }
-  } finally {
-    if (gen === matchGen) { driving = false; thinking = null; paint(scene); }
-  }
+function onPile(a) { if (!inflight && !awaiting) send({ a }); }
+function onDiscard() { if (!inflight && !awaiting) send({ a: "discard" }); }
+function send(a) {
+  awaiting = true;
+  paint(scene);
+  cfg.act(a);
 }
 
-// ---------- match lifecycle ----------
-function newMatch() {
-  matchGen++;
-  dealing = false;
-  driving = false;
-  inflight = 0;
-  thinking = null;
-  sheet = null;
-  announce = null;
-  status = {};
-  recent = {};
-  turns = [];
-  lastTurn = null;
-  chain = Promise.resolve();
-  game = newGame();
-  addPlayer(game, ME, "You");
-  for (let i = 0; i < settings.bots; i++) {
-    addPlayer(game, `b${i + 1}`, BOT_NAMES[i]);
-    game.players[game.players.length - 1].bot = true;
-  }
-  startRound(game);
-  seq = 0;
-  seen = 0;
-  scene = makeScene();
-  build(scene);
-  const gen = matchGen;
-  // The first message is the deal, sent like any other.
-  exclusive(async () => { inflight++; try { await receive({ seq: ++seq, view: makeScene(), events: [{ t: "deal" }] }); } finally { if (gen === matchGen) inflight--; } })
-    .then(() => { if (gen === matchGen) { paint(scene); kick(); } });
+let root = null;
+// Builds the table for the players in view into rootEl. Returns the handle the app uses.
+export function mountTable(rootEl, view, config) {
+  root = rootEl;
+  cfg = config;
+  me = view.you;
+  mountGen++;
+  applyMotion();
+  clearTimeout(thinkTimer);
+  scene = null; inflight = 0; waiting = 0; awaiting = false; dealing = false; thinkOn = false;
+  sheet = null; announce = null; status = {}; recent = {}; turns = []; lastTurn = null;
+  chain = Promise.resolve(); sid = null; seen = 0;
+  els = {};
+  build(view);
+  for (const b of boards.values()) b.shown = null;
+  return {
+    receive,
+    idle,
+    unlock() { awaiting = false; if (scene) paint(scene); },
+    get els() { return els; },
+    get busy() { return inflight > 0 || waiting > 0; },
+  };
 }
-
-// ---------- notes and controls ----------
-const notes = document.getElementById("notes");
-function seg(label, options, current, onPick) {
-  const wrap = h("span", { class: "seg" });
-  for (const [val, text] of options) {
-    wrap.append(h("button", { "aria-pressed": String(String(current) === String(val)), onclick: () => { onPick(val); syncControls(); } }, text));
-  }
-  return h("div", { class: "ctl" }, h("span", {}, label), wrap);
-}
-function syncControls() {
-  notes.replaceChildren(
-    h("button", { class: "close", onclick: () => document.body.classList.remove("show-mock") }, "Close"),
-    h("h1", {}, "Kartenrunde, livelier"),
-    h("p", { class: "soft" }, "Interactive mock. It plays the real rules (game.js) and bots (bot.js) against you; only the presentation is new."),
-    h("h2", {}, "Try it"),
-    seg("Animation speed", [["slow", "Slow"], ["normal", "Normal"], ["fast", "Fast"], ["off", "Off"]], settings.speed, (v) => { settings.speed = v; store.set("kr-mock-speed", v); applySpeed(); }),
-    seg("Opponents", [[1, "1"], [2, "2"], [3, "3"], [5, "5"], [7, "7"]], settings.bots, (v) => { settings.bots = Number(v); store.set("kr-mock-bots", v); newMatch(); }),
-    h("div", { class: "ctl" }, h("span", {}, "Game"),
-      h("button", { onclick: () => { document.body.classList.remove("show-mock"); newMatch(); } }, "Restart"),
-      h("button", { "aria-pressed": String(autopilot), class: autopilot ? "primary" : "", onclick: () => { autopilot = !autopilot; syncControls(); kick(); } }, autopilot ? "Autopilot on" : "Autopilot: play my turns")),
-    h("h2", {}, "What changed"),
-    h("ul", {},
-      h("li", {}, h("b", {}, "Cards travel. "), "A drawn card flips as it flies from the pile to the hand spot, a placed card flies to its slot, the replaced one flies to the discard pile. Dealing and column clears are animated too."),
-      h("li", {}, h("b", {}, "A shared hand spot. "), "The card someone holds sits between the piles with their name above it, so you see what they are deciding about."),
-      h("li", {}, h("b", {}, "Opponent turns are narrated. "), "Each board has a status line (“thinking…”, “drew 7”, “7 → r2c3”), the dock above your grid spells the step out, and flights carry the player’s initial."),
-      h("li", {}, h("b", {}, "What changed since you looked. "), "A blue ring and dot mark the cards an opponent touched in their last turn."),
-      h("li", {}, h("b", {}, "A turn log. "), "The Log button lists every turn of the game, built from the same events."),
-      h("li", {}, h("b", {}, "Scores count. "), "Shown sums tick up and down with a floating delta; the round ends with a staggered reveal and a counting results table."),
-      h("li", {}, h("b", {}, "Calm by default. "), "Speed Off (or reduced-motion in your system settings) removes all movement and keeps the narration.")),
-    h("p", { class: "soft" }, "Not in the mock: networking, QR pairing, and the lobby. They stay as they are."));
-}
-
-applySpeed();
-syncControls();
-newMatch();
