@@ -186,7 +186,7 @@ function build(view) {
   setCard(els.handCard, { up: true, v: 0 });
   els.handBox = h("div", { class: "handbox" }, els.handCard);
   els.handOwner = h("div", { class: "owner" }, "Hand");
-  els.handSlot = h("div", { class: "slot handslot" }, els.handOwner, els.handBox, h("div", {}, " "));
+  els.handSlot = h("div", { class: "slot handslot" }, els.handBox, els.handOwner);
   els.flash = h("div", { class: "flash", role: "status" });
   els.table = h("div", { class: "table" },
     h("div", { class: "slot" }, els.drawPile, els.drawLabel),
