@@ -187,9 +187,13 @@ function send(ch, msg) {
   if (ch && ch.readyState === "open") ch.send(JSON.stringify(msg));
 }
 
-function broadcast() {
+// events: what the last action caused (see apply in game.js). Each view carries a sequence number, so
+// a client can tell whether the events continue on from the view it already shows.
+let seq = 0;
+function broadcast(events = []) {
   persist();
-  for (const [pid, ch] of peers) send(ch, { t: "view", v: viewFor(game, pid) });
+  seq++;
+  for (const [pid, ch] of peers) send(ch, { t: "view", v: viewFor(game, pid), seq, events });
   view = viewFor(game, HOST_ID);
   render();
   scheduleBots();
@@ -225,19 +229,20 @@ function removeBot(id) {
 }
 
 function hostAct(pid, a) {
+  let events;
   try {
     if (a.a === "rematch") {
       if (pid !== HOST_ID || game.phase !== "gameEnd") throw new Error("Only the host can start a new game");
-      rematch(game);
+      events = rematch(game);
     } else {
       if (a.a === "next" && pid !== HOST_ID) throw new Error("Only the host can start the next round");
-      apply(game, pid, a);
+      events = apply(game, pid, a);
     }
   } catch (e) {
     if (pid === HOST_ID) toast(e.message); else send(peers.get(pid), { t: "err", msg: e.message });
     return;
   }
-  broadcast();
+  broadcast(events);
 }
 
 function showLobby() {
@@ -245,7 +250,7 @@ function showLobby() {
   root.className = "";
   ui.plist = h("div");
   ui.invite = h("div");
-  ui.start = h("button", { class: "primary", onclick: () => { try { startRound(game); broadcast(); } catch (e) { toast(e.message); } } }, "Start game");
+  ui.start = h("button", { class: "primary", onclick: () => { try { startRound(game); broadcast([{ t: "deal" }]); } catch (e) { toast(e.message); } } }, "Start game");
   ui.addBtn = h("button", { onclick: () => openInvite(ui.invite, null) }, "Add a player");
   ui.botBtn = h("button", { onclick: addBot }, "Add a bot");
   root.replaceChildren(

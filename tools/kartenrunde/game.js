@@ -62,15 +62,16 @@ export function gridSum(p, all = false) {
   return p.grid.reduce((s, c) => s + (c && (all || c.up) ? c.v : 0), 0);
 }
 
-function refill(g, rnd) {
+function refill(g, rnd, ev) {
   if (g.draw.length) return;
   const top = g.discard.pop();
   g.draw = shuffle(g.discard, rnd);
   g.discard = top === undefined ? [] : [top];
+  ev.push({ t: "reshuffle" });
 }
 
 // Removes every column of three equal face-up cards onto the discard pile.
-function clearColumns(g, p) {
+function clearColumns(g, p, ev) {
   for (let c = 0; c < COLS; c++) {
     const idx = Array.from({ length: ROWS }, (_, r) => r * COLS + c);
     const cells = idx.map((i) => p.grid[i]);
@@ -78,25 +79,27 @@ function clearColumns(g, p) {
       cells.forEach((x) => g.discard.push(x.v));
       idx.forEach((i) => { p.grid[i] = null; });
       g.log.push(`${p.name} clears a column of ${cells[0].v}`);
+      ev.push({ t: "clear", pid: p.id, col: c, v: cells[0].v, cells: idx });
     }
   }
 }
 
-function endTurn(g, rnd) {
+function endTurn(g, rnd, ev) {
   const p = g.players[g.turn];
-  clearColumns(g, p);
+  clearColumns(g, p, ev);
   g.stage = "choose";
   g.held = null;
   g.heldFrom = null;
   if (g.closer === null && p.grid.every((c) => !c || c.up)) {
     g.closer = g.turn;
     g.log.push(`${p.name} has revealed everything`);
+    ev.push({ t: "close", pid: p.id });
   }
   g.turn = (g.turn + 1) % g.players.length;
-  if (g.closer !== null && g.turn === g.closer) finishRound(g, rnd);
+  if (g.closer !== null && g.turn === g.closer) finishRound(g, ev);
 }
 
-function finishRound(g) {
+function finishRound(g, ev) {
   g.players.forEach((p) => { p.grid.forEach((c) => { if (c) c.up = true; }); });
   const raw = g.players.map((p) => gridSum(p, true));
   const ci = g.closer;
@@ -109,14 +112,16 @@ function finishRound(g) {
   });
   g.doubled = doubled;
   g.phase = "roundEnd";
+  ev.push({ t: "roundEnd", doubled });
   if (g.players.some((p) => p.total >= END_SCORE)) {
     g.phase = "gameEnd";
     const best = Math.min(...g.players.map((p) => p.total));
     g.winner = g.players.filter((p) => p.total === best).map((p) => p.id);
+    ev.push({ t: "gameEnd", winner: g.winner });
   }
 }
 
-function beginPlay(g) {
+function beginPlay(g, ev) {
   // The previous round's closer starts. In the first round the highest sum of the two
   // revealed cards starts; ties go to the earlier seat.
   if (g.opener !== null) g.turn = g.opener;
@@ -130,11 +135,24 @@ function beginPlay(g) {
   g.phase = "play";
   g.stage = "choose";
   g.log.push(`${g.players[g.turn].name} starts`);
+  ev.push({ t: "play", pid: g.players[g.turn].id });
 }
 
-// Applies one action from a player. Returns nothing; throws Error on illegal moves.
+// Applies one action from a player and throws Error on illegal moves. Returns the events the action
+// caused, in order, so clients can show what happened. They only carry what every player may see
+// (a swapped-out face-down card is shown on the discard pile), so they can be sent to everyone.
 // actions: {a:"flip", i} | {a:"draw"} | {a:"take"} | {a:"swap", i} | {a:"discard"} | {a:"next"}
+// events:  {t:"flip", pid, i, v} | {t:"draw", pid, v} | {t:"take", pid, v} | {t:"discard", pid, v}
+//        | {t:"swap", pid, i, placed, replaced, wasUp} | {t:"clear", pid, col, v, cells}
+//        | {t:"close", pid} | {t:"play", pid} | {t:"reshuffle"} | {t:"roundEnd", doubled}
+//        | {t:"gameEnd", winner} | {t:"deal"}
 export function apply(g, pid, act, rnd = Math.random) {
+  const ev = [];
+  applyTo(g, pid, act, rnd, ev);
+  return ev;
+}
+
+function applyTo(g, pid, act, rnd, ev) {
   const pi = g.players.findIndex((p) => p.id === pid);
   if (pi < 0) throw new Error("unknown player");
   const p = g.players[pi];
@@ -146,6 +164,7 @@ export function apply(g, pid, act, rnd = Math.random) {
   if (act.a === "next") {
     if (g.phase !== "roundEnd") throw new Error("round is not over");
     startRound(g, rnd);
+    ev.push({ t: "deal" });
     return;
   }
 
@@ -155,7 +174,8 @@ export function apply(g, pid, act, rnd = Math.random) {
     if (c.up) throw new Error("already face up");
     if (faceUp(p).length >= 2) throw new Error("you already flipped two cards");
     c.up = true;
-    if (g.players.every((q) => faceUp(q).length >= 2)) beginPlay(g);
+    ev.push({ t: "flip", pid, i: act.i, v: c.v });
+    if (g.players.every((q) => faceUp(q).length >= 2)) beginPlay(g, ev);
     return;
   }
 
@@ -164,14 +184,16 @@ export function apply(g, pid, act, rnd = Math.random) {
 
   if (g.stage === "choose") {
     if (act.a === "draw") {
-      refill(g, rnd);
+      refill(g, rnd, ev);
       if (!g.draw.length) throw new Error("no cards left to draw");
       g.held = g.draw.pop();
+      ev.push({ t: "draw", pid, v: g.held });
       g.heldFrom = "draw";
       g.stage = "holding";
     } else if (act.a === "take") {
       if (!g.discard.length) throw new Error("discard pile is empty");
       g.held = g.discard.pop();
+      ev.push({ t: "take", pid, v: g.held });
       g.heldFrom = "discard";
       g.stage = "holding";
     } else throw new Error("draw or take the discard first");
@@ -181,13 +203,15 @@ export function apply(g, pid, act, rnd = Math.random) {
   if (g.stage === "holding") {
     if (act.a === "swap") {
       const c = cell(act.i);
+      ev.push({ t: "swap", pid, i: act.i, placed: g.held, replaced: c.v, wasUp: c.up });
       g.discard.push(c.v);
       c.v = g.held;
       c.up = true;
-      endTurn(g, rnd);
+      endTurn(g, rnd, ev);
     } else if (act.a === "discard") {
       if (g.heldFrom !== "draw") throw new Error("a card from the discard pile has to be placed");
       if (!p.grid.some((c) => c && !c.up)) throw new Error("no face-down card to flip");
+      ev.push({ t: "discard", pid, v: g.held });
       g.discard.push(g.held);
       g.held = null;
       g.stage = "flip";
@@ -200,7 +224,8 @@ export function apply(g, pid, act, rnd = Math.random) {
     const c = cell(act.i);
     if (c.up) throw new Error("already face up");
     c.up = true;
-    endTurn(g, rnd);
+    ev.push({ t: "flip", pid, i: act.i, v: c.v });
+    endTurn(g, rnd, ev);
   }
 }
 
@@ -225,4 +250,5 @@ export function rematch(g, rnd = Math.random) {
   g.round = 0;
   g.log = [];
   startRound(g, rnd);
+  return [{ t: "deal" }];
 }

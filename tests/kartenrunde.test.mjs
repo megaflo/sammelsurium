@@ -211,3 +211,90 @@ test("viewFor hides face-down values and the draw pile", () => {
   assert.ok(!("draw" in v));
   assert.equal(gridSum(g.players[0]) , v.players[0].grid.reduce((s, c) => s + (c.up ? c.v : 0), 0));
 });
+
+test("events: setup flips and the start of play", () => {
+  const g = setup(2);
+  const ev = [];
+  g.players.forEach((p) => { ev.push(...apply(g, p.id, { a: "flip", i: 0 }), ...apply(g, p.id, { a: "flip", i: 1 })); });
+  assert.deepEqual(ev.slice(0, 4).map((e) => e.t), ["flip", "flip", "flip", "flip"]);
+  assert.equal(ev[0].v, g.players[0].grid[0].v);
+  assert.deepEqual(ev[4], { t: "play", pid: g.players[g.turn].id });
+  assert.equal(ev.length, 5);
+});
+
+test("events: draw, swap of a face-down card and the next player's turn", () => {
+  const g = setup(2);
+  flipTwo(g);
+  const who = g.players[g.turn];
+  g.draw.push(7);
+  assert.deepEqual(apply(g, who.id, { a: "draw" }), [{ t: "draw", pid: who.id, v: 7 }]);
+  const old = who.grid[5].v;
+  assert.deepEqual(apply(g, who.id, { a: "swap", i: 5 }), [{ t: "swap", pid: who.id, i: 5, placed: 7, replaced: old, wasUp: false }]);
+  assert.equal(g.discard[g.discard.length - 1], old);
+});
+
+test("events: take, discard and flip", () => {
+  const g = setup(2);
+  flipTwo(g);
+  const who = g.players[g.turn];
+  const top = g.discard[g.discard.length - 1];
+  assert.deepEqual(apply(g, who.id, { a: "take" }), [{ t: "take", pid: who.id, v: top }]);
+  assert.deepEqual(apply(g, who.id, { a: "swap", i: 0 }).map((e) => e.t), ["swap"]);
+  const next = g.players[g.turn];
+  g.draw.push(3);
+  apply(g, next.id, { a: "draw" });
+  assert.deepEqual(apply(g, next.id, { a: "discard" }), [{ t: "discard", pid: next.id, v: 3 }]);
+  const v = next.grid[2].v;
+  assert.deepEqual(apply(g, next.id, { a: "flip", i: 2 }), [{ t: "flip", pid: next.id, i: 2, v }]);
+});
+
+test("events: a swap that completes a column reports swap, then clear", () => {
+  const g = setup(3);
+  flipTwo(g);
+  const who = g.players[g.turn];
+  [2, 6, 10].forEach((i) => { who.grid[i].v = 4; });
+  who.grid[2].up = true; who.grid[6].up = true;
+  g.draw.push(4);
+  apply(g, who.id, { a: "draw" });
+  const ev = apply(g, who.id, { a: "swap", i: 10 });
+  assert.deepEqual(ev.map((e) => e.t), ["swap", "clear"]);
+  assert.deepEqual(ev[1], { t: "clear", pid: who.id, col: 2, v: 4, cells: [2, 6, 10] });
+});
+
+test("events: closing, round end and game end", () => {
+  const g = setup();
+  flipTwo(g);
+  const a = g.turn, b = (a + 1) % 2;
+  const pa = g.players[a], pb = g.players[b];
+  fill(pa, 5); fill(pb, 1);
+  pa.grid.forEach((c, i) => { c.up = i !== 7; });
+  g.draw.push(6);
+  apply(g, pa.id, { a: "draw" });
+  assert.deepEqual(apply(g, pa.id, { a: "swap", i: 7 }).map((e) => e.t), ["swap", "close"]);
+  g.draw.push(2);
+  apply(g, pb.id, { a: "draw" });
+  const ev = apply(g, pb.id, { a: "swap", i: 4 });
+  assert.deepEqual(ev.map((e) => e.t), ["swap", "roundEnd", "gameEnd"]); // 144 points ends the game
+  assert.equal(ev[1].doubled, true);
+  assert.deepEqual(ev[2].winner, [pb.id]);
+});
+
+test("events: the next round is a deal", () => {
+  const g = setup(2);
+  g.phase = "roundEnd";
+  assert.deepEqual(apply(g, "p0", { a: "next" }), [{ t: "deal" }]);
+});
+
+test("events: an empty draw pile is reshuffled before the draw", () => {
+  const g = setup(2);
+  flipTwo(g);
+  const who = g.players[g.turn];
+  g.discard.push(...g.draw.splice(0));
+  const ev = apply(g, who.id, { a: "draw" });
+  assert.deepEqual(ev.map((e) => e.t), ["reshuffle", "draw"]);
+});
+
+test("rematch reports a new deal", () => {
+  const g = setup(2);
+  assert.deepEqual(rematch(g, seeded(3)), [{ t: "deal" }]);
+});
