@@ -1,12 +1,12 @@
 :root {
   --bg: #eef2f6; --panel: #ffffff; --ink: #18222d; --soft: #5f6e7d; --rule: #c5cfd9;
-  --accent: #2b5fd9; --accent-ink: #ffffff; --turn: #f2a900; --danger: #c2321f;
+  --accent: #2b5fd9; --accent-ink: #ffffff; --player: #2b5fd9; --turn: #f2a900; --danger: #c2321f;
   --back: #5a3d6e; --back-2: #6d4c84;
   --neg: #5b3fa0; --zero: #cfd6e4; --low: #1f9d8f; --mid: #f08a24; --high: #c2285f;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #11161c; --panel: #1b222b; --ink: #e8edf2; --soft: #95a3b1; --rule: #364351; --accent: #6b94ff; --accent-ink: #0b1220; --back: #3f2b4f; --back-2: #4e3662; }
+  :root { --bg: #11161c; --panel: #1b222b; --ink: #e8edf2; --soft: #95a3b1; --rule: #364351; --accent: #6b94ff; --accent-ink: #0b1220; --player: #6b94ff; --back: #3f2b4f; --back-2: #4e3662; }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -54,12 +54,13 @@ pre { white-space: pre-wrap; overflow-wrap: anywhere; font: .75rem/1.4 ui-monosp
 main.game { height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); display: flex; flex-direction: column; gap: 6px; }
 .bar { display: flex; align-items: center; gap: 8px; min-height: 36px; }
 .bar button { min-height: 36px; padding: 4px 12px; }
-.chip { flex: 1; min-width: 0; text-align: center; font-size: .78rem; font-weight: 600; background: color-mix(in srgb, var(--turn) 22%, var(--panel)); border: 1px solid var(--turn); border-radius: 99px; padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { flex: 1; min-width: 0; text-align: center; font-size: .78rem; font-weight: 600; background: var(--panel); border: 1px solid var(--soft); border-radius: 99px; padding: 4px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar .chip[hidden] { display: block !important; visibility: hidden; }
 
 .others { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 .other { background: var(--panel); border: 2px solid var(--rule); border-radius: 8px; padding: 4px 5px 5px; min-width: 0; }
-.other.turn { border-color: var(--turn); }
+.other.turn { border-color: var(--player); }
+.name .who { color: var(--player); }
 .other .name { display: flex; justify-content: space-between; font-size: .72rem; font-weight: 600; gap: 4px; margin-bottom: 3px; }
 .other .name > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .other .grid { gap: 2px; }
@@ -77,24 +78,26 @@ main.game { height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px
 .table.small .slot:last-child .label { text-align: right; }
 .table.small .card { width: 2.4rem; font-size: 1rem; }
 
-.dock { background: var(--panel); border: 2px solid var(--rule); border-radius: 12px; padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 8px; }
-.dock.mine { border-color: var(--accent); }
-.steps { display: flex; gap: 4px; }
-.steps span { flex: 1; text-align: center; font-size: .7rem; font-weight: 600; color: var(--soft); padding: 4px 2px; border-radius: 99px; border: 1px solid var(--rule); white-space: nowrap; }
-.steps span.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.steps span.done { color: var(--ink); border-color: var(--accent); }
-.say { font-weight: 700; text-align: center; line-height: 1.25; min-width: 0; }
+/* Piles and info box share a fixed-height zone, so the grid below never moves. */
+.zone { height: 12.5rem; display: flex; flex-direction: column; gap: 6px; flex: none; }
+.zone .table { flex: none; }
+.dock { flex: 1; min-height: 0; background: var(--panel); border: 2px solid var(--rule); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; justify-content: center; }
+.dock.of-other { border-color: var(--player); }
+.say { font-weight: 700; font-size: 1.05rem; text-align: center; line-height: 1.25; min-width: 0; }
 .say small { display: block; font-weight: 500; font-size: .8rem; color: var(--soft); margin-top: 2px; }
-.dock:not(:has(.hand)) .say { min-height: 2.6em; }
-.hand { display: flex; align-items: center; justify-content: center; gap: 16px; }
+.say .dot { margin-right: .5em; }
+.hand { display: flex; align-items: center; justify-content: center; gap: 18px; }
 .hand > .card { width: 3.8rem; font-size: 1.7rem; box-shadow: 0 6px 14px rgba(0,0,0,.28); transform: rotate(-3deg); flex: none; }
-.hand .side { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; min-width: 0; }
+.hand .side { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0; }
 .hand .side .say { text-align: left; }
-.hand .side button { min-height: 40px; padding: 6px 10px; font-size: .85rem; text-align: left; }
+.hand .side button { min-height: 44px; padding: 6px 18px; font-weight: 700; }
+button.pick { outline: 3px solid var(--turn); outline-offset: 1px; }
 
 .mine-wrap { flex: 1; display: flex; min-height: 12rem; }
 .mine-box { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--panel); border: 2px solid var(--rule); border-radius: 12px; padding: 6px 8px 8px; }
-.mine-box.turn { border-color: var(--turn); }
+.mine-box.turn { border-color: var(--player); }
+.mine-box .name .tag { color: var(--accent-ink); font-weight: 700; }
+.tag { display: inline-block; font-size: .62rem; letter-spacing: .02em; text-transform: uppercase; background: var(--player); border-radius: 99px; padding: 1px 7px; margin-left: 6px; vertical-align: 1px; }
 .mine-box .name { display: flex; justify-content: space-between; font-weight: 600; font-size: .85rem; margin-bottom: 5px; }
 .mine-box .name span:last-child { color: var(--soft); font-weight: 500; font-variant-numeric: tabular-nums; }
 .mine-box .grid { flex: 1; min-height: 0; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 5px; }

@@ -417,10 +417,11 @@ function gameShell() {
   ui.others = h("div", { class: "others" });
   ui.table = h("div", { class: "table" });
   ui.dock = h("div", { class: "dock" });
+  ui.zone = h("div", { class: "zone" }, ui.table, ui.dock);
   ui.mine = h("div", { class: "mine-wrap" });
   ui.invite = h("div");
   ui.sheet = h("div");
-  root.replaceChildren(ui.bar, ui.overlay, ui.others, ui.table, ui.dock, ui.mine, ui.invite, ui.sheet);
+  root.replaceChildren(ui.bar, ui.overlay, ui.others, ui.zone, ui.mine, ui.invite, ui.sheet);
 }
 
 const cls = (v) => (v <= -1 ? "v-neg" : v === 0 ? "v-zero" : v <= 4 ? "v-low" : v <= 8 ? "v-mid" : "v-high");
@@ -457,16 +458,18 @@ function updateGame() {
   ui.others.replaceChildren(...v.players.filter((_, i) => i !== meIdx).map((p) => {
     const i = v.players.indexOf(p);
     return h("div", { class: `other${v.phase === "play" && v.turn === i ? " turn" : ""}` },
-      h("div", { class: "name" }, h("span", {}, h("span", { class: p.connected ? "dot" : "dot off" }), p.name), h("span", {}, String(gridSum(p)))),
+      h("div", { class: "name" }, h("span", { class: v.phase === "play" && v.turn === i ? "who" : "" }, h("span", { class: p.connected ? "dot" : "dot off" }), p.name), h("span", {}, String(gridSum(p)))),
       h("div", { class: "grid" }, p.grid.map((c) => cardEl(c))));
   }));
 
-  // draw and discard piles; they shrink once a card is in hand
+  // Piles and info box share a fixed-height zone. The piles shrink once a card is in play
+  // and the box grows to fill the space.
+  const playing = v.phase === "play";
   const canDraw = myTurn && v.stage === "choose";
   const canTake = canDraw && v.discardTop !== null;
   const canDiscard = myTurn && v.stage === "holding" && v.heldFrom === "draw";
-  const small = myTurn && v.stage === "holding";
-  const dim = ended || v.phase === "setup" || (myTurn && v.stage !== "choose");
+  const small = playing && v.stage !== "choose";
+  const dim = ended || v.phase === "setup" || (playing && !canDraw);
   const back = h("button", { class: `card down${canDraw ? " pick" : ""}`, disabled: !canDraw, onclick: () => act({ a: "draw" }), "aria-label": "Draw pile" });
   const top = v.discardTop === null ? h("div", { class: "card empty" }, "empty")
     : h("button", {
@@ -481,40 +484,30 @@ function updateGame() {
     h("div", { class: "slot" }, back, drawLabel),
     h("div", { class: "slot" }, small ? [discardLabel, top] : [top, discardLabel]));
 
-  // dock: where you are in the turn, and the card in hand
+  // info box: what to do, or what the player whose turn it is does
   let title = "", sub = "";
+  let side = null; // beside the card in hand
   if (v.phase === "setup") {
     title = flipped < 2 ? "Flip two of your cards" : "Waiting for the others";
     sub = flipped < 2 ? `${flipped} of 2 flipped. Tap a face-down card.` : "They are still flipping their cards.";
-  } else if (v.phase === "play") {
-    if (!myTurn) {
-      title = `${cur.name} is playing${cur.connected ? "" : " (disconnected)"}`;
-      sub = v.held !== null ? `${cur.name} holds a ${v.held}.` : "";
-    } else if (v.stage === "choose") {
-      title = "Your turn";
-      sub = v.discardTop === null ? "Draw a new card." : `Draw a new card, or take the ${v.discardTop} from the discard pile.`;
-    } else if (v.stage === "holding") {
-      title = `You ${v.heldFrom === "draw" ? "drew" : "took"} a ${v.held}`;
-      sub = v.heldFrom === "draw" ? "Tap a card below to swap it, or discard it and flip a card." : "Tap a card below to swap it.";
-    } else {
-      title = "Flip a card";
-      sub = "Tap one of your face-down cards.";
-    }
+  } else if (playing && !myTurn) {
+    title = h("span", {}, h("span", { class: cur.connected ? "dot" : "dot off" }), `${cur.name} is playing${cur.connected ? "" : " (disconnected)"}`);
+    sub = v.stage === "holding" ? `${v.heldFrom === "draw" ? "drew" : "took"} a ${v.held}` : v.stage === "flip" ? "flips a card" : "";
+  } else if (playing) {
+    if (v.stage === "choose") title = v.discardTop === null ? "Draw" : "Draw or take";
+    else if (v.stage === "flip") title = "Flip a card";
+    else side = canDiscard
+      ? [h("button", { class: "pick", onclick: () => act({ a: "discard" }) }, "Discard"), h("div", { class: "say" }, "or place")]
+      : h("div", { class: "say" }, "Place");
   } else title = "Round over";
-  const track = myTurn ? h("div", { class: "steps" }, ["1 Draw or take", "2 Place", "3 Flip"].map((s, i) => {
-    const at = v.stage === "choose" ? 1 : v.stage === "holding" ? 2 : 3;
-    return h("span", { class: i + 1 === at ? "on" : i + 1 < at ? "done" : "" }, s);
-  })) : null;
   const text = h("div", { class: "say" }, title, sub && h("small", {}, sub));
-  let body = text;
-  if (v.phase === "play" && v.held !== null && v.stage !== "choose") {
-    body = h("div", { class: "hand" },
-      h("div", { class: `card ${cls(v.held)}`, "aria-label": `Card in hand: ${v.held}` }, String(v.held)),
-      h("div", { class: "side" }, text,
-        canDiscard ? h("button", { onclick: () => act({ a: "discard" }) }, "Discard it") : null));
-  }
-  ui.dock.className = `dock${myTurn || (v.phase === "setup" && flipped < 2) ? " mine" : ""}`;
-  ui.dock.replaceChildren(...[track, body].filter(Boolean));
+  const heldCard = playing && v.held !== null && v.stage === "holding";
+  ui.dock.className = `dock${playing && !myTurn ? " of-other" : ""}`;
+  ui.dock.replaceChildren(heldCard
+    ? h("div", { class: "hand" },
+      h("div", { class: `card ${cls(v.held)}`, "aria-label": myTurn ? `Card in hand: ${v.held}` : `${cur.name}'s card: ${v.held}` }, String(v.held)),
+      h("div", { class: "side" }, myTurn ? side : text))
+    : text);
 
   // my grid
   const clickable = (c) => {
@@ -527,7 +520,7 @@ function updateGame() {
   };
   const kind = v.phase === "play" && v.stage === "holding" ? "swap" : "flip";
   ui.mine.replaceChildren(h("div", { class: `mine-box${myTurn ? " turn" : ""}` },
-    h("div", { class: "name" }, h("span", {}, "You"), h("span", {}, `${gridSum(me)} shown · total ${me.total}`)),
+    h("div", { class: "name" }, h("span", { class: myTurn ? "who" : "" }, "You", myTurn && h("span", { class: "tag" }, "Your turn")), h("span", {}, `${gridSum(me)} shown · total ${me.total}`)),
     h("div", { class: "grid" }, me.grid.map((c, i) => h("div", { class: "cell" }, cardEl(c, { pick: clickable(c), onclick: () => act({ a: kind, i }) }))))));
 
   // reconnect buttons (host) and the scores / round result sheet
