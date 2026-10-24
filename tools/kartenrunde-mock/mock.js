@@ -46,6 +46,7 @@ let game = null; // the real game state; this device is the host
 let scene = null; // what is on screen right now (a masked view plus the card under the discard top)
 let matchGen = 0; // bumped on restart so stale async work can bail out
 let inflight = 0; // > 0 while an action is animating
+let dealing = false; // the round is being dealt
 let driving = false;
 let autopilot = false;
 let thinking = null; // id of the player the table is waiting for
@@ -285,7 +286,7 @@ function paint(sc, { freezeSums = false } = {}) {
       cell.card.classList.toggle("recent", !b.mine && c !== null && !!recent[p.id] && recent[p.id].has(k));
       if (b.mine) {
         let pick = false;
-        if (c && idle) {
+        if (c && (idle || (v.phase === "setup" && !dealing))) {
           if (v.phase === "setup") pick = !c.up && flipped < 2;
           else if (myTurn) pick = v.stage === "holding" ? v.held !== null : v.stage === "flip" ? !c.up : false;
         }
@@ -639,6 +640,7 @@ function revealDelays(next, ending) {
 // New round: every card is dealt from the draw pile, then the first discard is turned over.
 async function dealRound(sc) {
   const gen = matchGen;
+  dealing = true;
   sheet = null;
   announce = null;
   status = {};
@@ -663,14 +665,15 @@ async function dealRound(sc) {
   } else { rels.forEach((r) => r()); relTop(); }
   if (gen !== matchGen) return;
   for (const card of targets) card.classList.remove("noanim");
+  dealing = false;
   paint(sc);
 }
 
 // ---------- input ----------
 function onCell(i) {
-  if (inflight) return;
   const sc = scene;
-  if (sc.phase === "setup") { perform(ME, { a: "flip", i }).then(kick); return; }
+  if (sc.phase === "setup") { if (!dealing) perform(ME, { a: "flip", i }).then(kick); return; }
+  if (inflight) return;
   if (sc.phase !== "play" || sc.turn !== 0) return;
   perform(ME, { a: sc.stage === "holding" ? "swap" : "flip", i }).then(kick);
 }
@@ -723,6 +726,7 @@ async function kick() {
 // ---------- match lifecycle ----------
 function newMatch() {
   matchGen++;
+  dealing = false;
   driving = false;
   inflight = 0;
   thinking = null;
