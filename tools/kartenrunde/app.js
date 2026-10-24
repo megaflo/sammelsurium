@@ -1,10 +1,12 @@
 import { newGame, addPlayer, startRound, apply, viewFor, rematch, gridSum, COLS, END_SCORE } from "./game.js";
 import { createInvite, acceptReply, joinWith, addressesOf, diagnose } from "./net.js";
+import { botMove } from "./bot.js";
 import { startScanner } from "./scanner.js";
 import qrcode from "./vendor/qrcode.mjs";
 
 const root = document.getElementById("app");
 const HOST_ID = "p0";
+const BOT_DELAY = 800;
 const TIMEOUT = "Timed out. Are both devices on the same network? If an address shown on either screen ended in .local, allow the camera on both devices and start again.";
 
 // ---------- small helpers ----------
@@ -123,6 +125,7 @@ let myName = "";
 let screen = null; // "lobby" | "game"
 let showScores = false;
 let peek = false; // round-end sheet hidden to look at the cards
+let botTimer = null; // host only: pending bot move
 const ui = {};
 
 // ---------- home ----------
@@ -171,7 +174,7 @@ function resumeHost(saved) {
   role = "host";
   game = saved.game;
   nextId = saved.nextId;
-  game.players.forEach((p) => { p.connected = p.id === HOST_ID; });
+  game.players.forEach((p) => { p.connected = p.id === HOST_ID || !!p.bot; });
   myName = game.players.find((p) => p.id === HOST_ID).name;
   if (game.phase === "lobby") showLobby(); else broadcast();
 }
@@ -189,6 +192,36 @@ function broadcast() {
   for (const [pid, ch] of peers) send(ch, { t: "view", v: viewFor(game, pid) });
   view = viewFor(game, HOST_ID);
   render();
+  scheduleBots();
+}
+
+// Bots move one action at a time with a short pause so the host can follow along.
+function scheduleBots() {
+  clearTimeout(botTimer);
+  botTimer = null;
+  if (role !== "host" || !game) return;
+  for (const p of game.players) {
+    if (!p.bot) continue;
+    const move = botMove(viewFor(game, p.id));
+    if (!move) continue;
+    botTimer = setTimeout(() => { botTimer = null; hostAct(p.id, move); }, BOT_DELAY);
+    return;
+  }
+}
+
+function addBot() {
+  try {
+    const n = game.players.filter((p) => p.bot).length + 1;
+    addPlayer(game, `b${nextId++}`, `Bot ${n}`);
+    game.players[game.players.length - 1].bot = true;
+  } catch (e) { toast(e.message); return; }
+  broadcast();
+}
+
+function removeBot(id) {
+  if (game.phase !== "lobby") return;
+  game.players = game.players.filter((p) => p.id !== id);
+  broadcast();
 }
 
 function hostAct(pid, a) {
@@ -214,22 +247,27 @@ function showLobby() {
   ui.invite = h("div");
   ui.start = h("button", { class: "primary", onclick: () => { try { startRound(game); broadcast(); } catch (e) { toast(e.message); } } }, "Start game");
   ui.addBtn = h("button", { onclick: () => openInvite(ui.invite, null) }, "Add a player");
+  ui.botBtn = h("button", { onclick: addBot }, "Add a bot");
   root.replaceChildren(
     h("h1", {}, "Kartenrunde"),
-    h("div", { class: "panel" }, h("h2", {}, "Players"), ui.plist, h("div", { class: "row" }, ui.addBtn, ui.start)),
+    h("div", { class: "panel" }, h("h2", {}, "Players"), ui.plist, h("div", { class: "row" }, ui.addBtn, ui.botBtn, ui.start)),
     ui.invite,
     h("p", {}, h("button", { onclick: () => { if (confirm("Leave the lobby?")) { closeAll(); home(); } } }, "Leave")));
   broadcast();
 }
 
 function closeAll() {
+  clearTimeout(botTimer);
+  botTimer = null;
   for (const ch of peers.values()) { ch.onclose = null; ch.close(); }
   peers.clear();
   if (hostChannel) { hostChannel.onclose = null; hostChannel.close(); hostChannel = null; }
 }
 
 function lobbyList(v) {
-  const rows = v.players.map((p) => h("li", {}, h("span", {}, h("span", { class: p.connected ? "dot" : "dot off" }), p.name, p.id === v.you ? " (you)" : "")));
+  const bots = new Set(role === "host" && game ? game.players.filter((p) => p.bot).map((p) => p.id) : []);
+  const rows = v.players.map((p) => h("li", {}, h("span", {}, h("span", { class: p.connected ? "dot" : "dot off" }), p.name, p.id === v.you ? " (you)" : ""),
+    bots.has(p.id) && h("button", { onclick: () => removeBot(p.id), "aria-label": `Remove ${p.name}` }, "Remove")));
   return h("ul", { class: "players" }, rows);
 }
 
@@ -396,6 +434,7 @@ function render() {
     ui.plist.replaceChildren(lobbyList(view));
     if (ui.start) ui.start.disabled = view.players.length < 2;
     if (ui.addBtn) ui.addBtn.disabled = view.players.length >= 8;
+    if (ui.botBtn) ui.botBtn.disabled = view.players.length >= 8;
   } else updateGame();
 }
 
