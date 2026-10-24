@@ -255,11 +255,13 @@ function paint(sc, { freezeSums = false } = {}) {
     const b = boards.get(p.id);
     const isTurn = v.phase === "play" && v.turn === i;
     b.box.classList.toggle("turn", isTurn);
-    setNum(b, gridSum(p), v.phase === "play", freezeSums);
+    const doubled = ended && v.doubled && v.closer === i;
+    setNum(b, ended && p.roundScore != null ? p.roundScore : gridSum(p), v.phase === "play", freezeSums);
     if (b.mine) {
-      b.suffix.textContent = ` shown · total ${p.total}`;
+      b.suffix.textContent = `${doubled ? " ×2" : ""} shown · total ${p.total}`;
       b.tag.hidden = !isTurn;
     } else {
+      b.suffix.textContent = doubled ? " ×2" : "";
       const dots = thinkingId === p.id ? h("span", { class: "dots" }, "thinking ", h("i"), h("i"), h("i")) : null;
       b.status.replaceChildren(...(dots ? [dots] : [status[p.id] || (v.phase === "setup" ? "" : "")]));
     }
@@ -284,8 +286,11 @@ function paint(sc, { freezeSums = false } = {}) {
   // table
   const canDraw = myTurn && v.stage === "choose" && idle;
   const canTake = canDraw && v.discardTop !== null;
+  const mineP = v.players[meIdx];
+  const canDiscard = myTurn && idle && v.stage === "holding" && v.heldFrom === "draw" && v.held !== null && mineP.grid.some((c) => c && !c.up);
+  const usable = canTake || canDiscard;
   els.drawLabel.replaceChildren(h("b", {}, "Draw"), ` · ${v.drawCount}`);
-  els.discardLabel.replaceChildren(canTake ? h("b", {}, `Take the ${v.discardTop}`) : h("b", {}, "Discard"));
+  els.discardLabel.replaceChildren(canTake ? h("b", {}, `Take the ${v.discardTop}`) : canDiscard ? h("b", {}, `Discard the ${v.held}`) : h("b", {}, "Discard"));
   setCard(els.drawTop, v.drawCount ? { up: false } : null);
   setCard(els.discardTop, v.discardTop === null ? null : { up: true, v: v.discardTop });
   setCard(els.discardUnder, v.under === null || v.under === undefined ? null : { up: true, v: v.under });
@@ -298,10 +303,10 @@ function paint(sc, { freezeSums = false } = {}) {
   els.handOwner.textContent = holding ? (v.turn === meIdx ? "Your hand" : `${v.players[v.turn].name}'s hand`) : "Hand";
   els.drawPile.disabled = !canDraw;
   els.drawTop.classList.toggle("pick", canDraw);
-  els.discardPile.disabled = !canTake;
-  els.discardTop.classList.toggle("pick", canTake);
+  els.discardPile.disabled = !usable;
+  els.discardTop.classList.toggle("pick", usable);
   els.drawPile.classList.toggle("dim", !canDraw && v.phase !== "setup" && !ended);
-  els.discardPile.classList.toggle("dim", !canTake && v.phase !== "setup" && !ended);
+  els.discardPile.classList.toggle("dim", !usable && v.phase !== "setup" && !ended);
 
   // my turn begins: a gentle cue
   const turnKey = v.phase === "play" ? v.turn : null;
@@ -313,7 +318,7 @@ function paint(sc, { freezeSums = false } = {}) {
   if (idle || turnKey !== meIdx) lastTurn = turnKey;
 
   paintDock(v, myTurn, holding, thinkingId);
-  paintSheet();
+  if (sheet && sheet.painted !== sc) paintSheet();
   if (cfg.onPaint) cfg.onPaint(v);
 }
 
@@ -336,9 +341,7 @@ function paintDock(v, myTurn, holding, thinkingId) {
     else if (v.stage === "flip") { head = "Flip a card"; sub = "Tap one of your face-down cards"; }
     else if (holding) {
       head = `Place the ${v.held}`;
-      const canDiscard = v.heldFrom === "draw";
-      sub = canDiscard ? "on any of your cards, or discard it" : "on any of your cards";
-      if (canDiscard) actions = [h("button", { class: "pick", onclick: () => onDiscard() }, "Discard")];
+      sub = v.heldFrom === "draw" ? "on any of your cards, or tap the discard pile" : "on any of your cards";
     } else head = "…";
   } else if (v.phase === "play") {
     ofOther = true;
@@ -363,6 +366,7 @@ function closeSheet() { sheet = null; paintSheet(); }
 
 function paintSheet() {
   if (!sheet) { els.sheet.replaceChildren(); return; }
+  sheet.painted = scene;
   const keep = els.sheet.querySelector(".sheet")?.scrollTop || 0;
   const parts = sheet.k === "log" ? logSheet() : sheet.k === "results" ? resultsSheet() : scoresSheet();
   const dismiss = () => closeSheet();
@@ -694,8 +698,11 @@ function onCell(i) {
   if (sc.phase !== "play" || sc.players[sc.turn].id !== me) return;
   send({ a: sc.stage === "holding" ? "swap" : "flip", i });
 }
-function onPile(a) { if (!inflight && !awaiting) send({ a }); }
-function onDiscard() { if (!inflight && !awaiting) send({ a: "discard" }); }
+function onPile(a) {
+  if (inflight || awaiting) return;
+  // The discard pile takes its top card while choosing and receives the drawn card while holding.
+  send({ a: a === "take" && scene.stage === "holding" ? "discard" : a });
+}
 function send(a) {
   awaiting = true;
   paint(scene);
