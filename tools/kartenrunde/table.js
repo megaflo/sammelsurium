@@ -560,8 +560,6 @@ async function settle(next, ev, flipped, pid, who) {
     await pause(reveal + 700);
     for (const b of boards.values()) b.cells.forEach((c) => c.card.style.removeProperty("--delay"));
     if (gen !== mountGen) return;
-    autopilot = false;
-    syncControls();
     sheet = { k: "results" };
     paintSheet();
   }
