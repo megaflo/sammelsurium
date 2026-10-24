@@ -1,12 +1,14 @@
-import { newGame, addPlayer, startRound, apply, viewFor, rematch, gridSum, COLS, END_SCORE } from "./game.js";
+import { newGame, addPlayer, startRound, apply, viewFor, rematch } from "./game.js";
 import { createInvite, acceptReply, joinWith, addressesOf, diagnose } from "./net.js";
 import { botMove } from "./bot.js";
 import { startScanner } from "./scanner.js";
+import { mountTable } from "./table.js";
 import qrcode from "./vendor/qrcode.mjs";
 
 const root = document.getElementById("app");
 const HOST_ID = "p0";
-const BOT_DELAY = 800;
+// How long a bot waits before its next step, once the table has shown the previous one.
+const BOT_DELAY = { setup: 350, choose: 800, holding: 650, flip: 450 };
 const TIMEOUT = "Timed out. Are both devices on the same network? If an address shown on either screen ended in .local, allow the camera on both devices and start again.";
 
 // ---------- small helpers ----------
@@ -123,15 +125,16 @@ let hostChannel = null; // guest only
 let view = null; // what the UI shows
 let myName = "";
 let screen = null; // "lobby" | "game"
-let showScores = false;
-let peek = false; // round-end sheet hidden to look at the cards
+let table = null; // the game table while a game is on screen
 let botTimer = null; // host only: pending bot move
+let botGen = 0; // host only: bumped to drop a bot move that has become outdated
+const SESSION = Math.random().toString(36).slice(2); // tells clients apart two runs of this host
 const ui = {};
 
 // ---------- home ----------
 function home() {
   root.className = "";
-  role = null; game = null; view = null; screen = null;
+  role = null; game = null; view = null; screen = null; table = null;
   peers.clear();
   const name = h("input", { type: "text", maxlength: "16", placeholder: "Your name", value: store.get("kartenrunde-name") || "", "aria-label": "Your name" });
   const need = () => {
@@ -193,22 +196,27 @@ let seq = 0;
 function broadcast(events = []) {
   persist();
   seq++;
-  for (const [pid, ch] of peers) send(ch, { t: "view", v: viewFor(game, pid), seq, events });
-  view = viewFor(game, HOST_ID);
-  render();
+  for (const [pid, ch] of peers) send(ch, { t: "view", v: viewFor(game, pid), seq, sid: SESSION, events });
+  deliver({ v: viewFor(game, HOST_ID), seq, sid: SESSION, events });
   scheduleBots();
 }
 
-// Bots move one action at a time with a short pause so the host can follow along.
+// Bots move one action at a time. Each waits until the table has finished showing the last step,
+// then pauses a moment so the others can follow along.
 function scheduleBots() {
   clearTimeout(botTimer);
   botTimer = null;
+  const gen = ++botGen;
   if (role !== "host" || !game) return;
   for (const p of game.players) {
     if (!p.bot) continue;
     const move = botMove(viewFor(game, p.id));
     if (!move) continue;
-    botTimer = setTimeout(() => { botTimer = null; hostAct(p.id, move); }, BOT_DELAY);
+    const delay = BOT_DELAY[game.phase === "setup" ? "setup" : game.stage];
+    (table ? table.idle() : Promise.resolve()).then(() => {
+      if (gen !== botGen) return;
+      botTimer = setTimeout(() => { botTimer = null; hostAct(p.id, move); }, delay);
+    });
     return;
   }
 }
@@ -239,7 +247,7 @@ function hostAct(pid, a) {
       events = apply(game, pid, a);
     }
   } catch (e) {
-    if (pid === HOST_ID) toast(e.message); else send(peers.get(pid), { t: "err", msg: e.message });
+    if (pid === HOST_ID) { toast(e.message); if (table) table.unlock(); } else send(peers.get(pid), { t: "err", msg: e.message });
     return;
   }
   broadcast(events);
@@ -264,6 +272,7 @@ function showLobby() {
 function closeAll() {
   clearTimeout(botTimer);
   botTimer = null;
+  botGen++;
   for (const ch of peers.values()) { ch.onclose = null; ch.close(); }
   peers.clear();
   if (hostChannel) { hostChannel.onclose = null; hostChannel.close(); hostChannel = null; }
@@ -406,8 +415,8 @@ function runJoin(box, done) {
 function onHostMessage(e) {
   let msg;
   try { msg = JSON.parse(e.data); } catch { return; }
-  if (msg.t === "view") { view = msg.v; render(); }
-  else if (msg.t === "err") toast(msg.msg);
+  if (msg.t === "view") deliver(msg);
+  else if (msg.t === "err") { toast(msg.msg); if (table) table.unlock(); }
 }
 
 function lost() {
@@ -424,8 +433,9 @@ function act(a) {
   else send(hostChannel, { t: "act", act: a });
 }
 
-function render() {
-  if (!view) return;
+// Takes a message with the newest view (and the events behind it) and shows it.
+function deliver(msg) {
+  view = msg.v;
   const wantLobby = view.phase === "lobby";
   if (role === "guest" && screen === null) {
     // First view after joining: the join screen is replaced by the lobby or game shell.
@@ -435,16 +445,17 @@ function render() {
   } else if (!wantLobby && screen !== "game") {
     gameShell();
   }
-  if (view.phase === "lobby") {
+  if (wantLobby) {
     ui.plist.replaceChildren(lobbyList(view));
     if (ui.start) ui.start.disabled = view.players.length < 2;
     if (ui.addBtn) ui.addBtn.disabled = view.players.length >= 8;
     if (ui.botBtn) ui.botBtn.disabled = view.players.length >= 8;
-  } else updateGame();
+  } else table.receive(msg);
 }
 
 function guestLobbyShell() {
   screen = "lobby";
+  table = null;
   root.className = "";
   ui.plist = h("div");
   ui.invite = h("div");
@@ -453,158 +464,17 @@ function guestLobbyShell() {
 
 function gameShell() {
   screen = "game";
-  showScores = false;
-  peek = false;
   root.className = "game";
-  ui.bar = h("div", { class: "bar" });
-  ui.overlay = h("div");
-  ui.others = h("div", { class: "others" });
-  ui.table = h("div", { class: "table" });
-  ui.dock = h("div", { class: "dock" });
-  ui.zone = h("div", { class: "zone" }, ui.table, ui.dock);
-  ui.mine = h("div", { class: "mine-wrap" });
-  ui.invite = h("div");
-  ui.sheet = h("div");
-  root.replaceChildren(ui.bar, ui.overlay, ui.others, ui.zone, ui.mine, ui.invite, ui.sheet);
+  table = mountTable(root, view, { act, toast, isHost: role === "host", onPaint: showAway });
+  ui.invite = table.els.invite;
 }
 
-const cls = (v) => (v <= -1 ? "v-neg" : v === 0 ? "v-zero" : v <= 4 ? "v-low" : v <= 8 ? "v-mid" : "v-high");
-function cardEl(c, opts = {}) {
-  const { pick, onclick, label } = opts;
-  if (c === null) return h("div", { class: "card gone" });
-  const el = h(onclick ? "button" : "div", {
-    class: `card ${c.up ? cls(c.v) : "down"}${pick ? " pick" : ""}`, onclick: pick ? onclick : null,
-    "aria-label": label || (c.up ? `Card ${c.v}` : "Face-down card"),
-  }, c.up ? String(c.v) : "");
-  if (onclick && !pick) el.disabled = true;
-  return el;
-}
-
-function updateGame() {
-  const v = view;
-  const meIdx = v.players.findIndex((p) => p.id === v.you);
-  const me = v.players[meIdx];
-  const cur = v.players[v.turn];
-  const myTurn = v.phase === "play" && v.turn === meIdx;
-  const ended = v.phase === "roundEnd" || v.phase === "gameEnd";
-  const flipped = me.grid.filter((c) => c && c.up).length;
-  if (!ended) peek = false;
-  const sheetOpen = ended ? !peek : showScores;
-
-  // top bar
-  const closer = v.closer !== null && v.phase === "play" ? v.players[v.closer] : null;
-  ui.bar.replaceChildren(
-    h("strong", {}, `Round ${v.round}`),
-    h("span", { class: "chip", hidden: !closer }, closer ? `${closer.id === v.you ? "You are" : `${closer.name} is`} out · last turns` : ""),
-    h("button", { onclick: () => { if (ended) peek = !peek; else showScores = !showScores; updateGame(); } }, ended ? "Results" : "Scores"));
-
-  // opponents
-  ui.others.replaceChildren(...v.players.filter((_, i) => i !== meIdx).map((p) => {
-    const i = v.players.indexOf(p);
-    return h("div", { class: `other${v.phase === "play" && v.turn === i ? " turn" : ""}` },
-      h("div", { class: "name" }, h("span", { class: v.phase === "play" && v.turn === i ? "who" : "" }, h("span", { class: p.connected ? "dot" : "dot off" }), p.name), h("span", {}, String(gridSum(p)))),
-      h("div", { class: "grid" }, p.grid.map((c) => cardEl(c))));
-  }));
-
-  // Piles and info box share a fixed-height zone. The piles shrink once a card is in play
-  // and the box grows to fill the space.
-  const playing = v.phase === "play";
-  const canDraw = myTurn && v.stage === "choose";
-  const canTake = canDraw && v.discardTop !== null;
-  const canDiscard = myTurn && v.stage === "holding" && v.heldFrom === "draw";
-  const small = playing && v.stage !== "choose";
-  const dim = ended || v.phase === "setup" || (playing && !canDraw);
-  const back = h("button", { class: `card down${canDraw ? " pick" : ""}`, disabled: !canDraw, onclick: () => act({ a: "draw" }), "aria-label": "Draw pile" });
-  const top = v.discardTop === null ? h("div", { class: "card empty" }, "empty")
-    : h("button", {
-      class: `card ${cls(v.discardTop)}${canTake ? " pick" : ""}`, disabled: !canTake,
-      onclick: () => act({ a: "take" }), "aria-label": `Discard pile, top card ${v.discardTop}`,
-    }, String(v.discardTop));
-  const drawLabel = h("div", { class: "label" }, h("b", {}, "Draw"), small ? h("br") : " · ", String(v.drawCount));
-  const discardLabel = canTake ? h("div", { class: "label" }, h("b", {}, "Take"), ` the ${v.discardTop}`)
-    : h("div", { class: "label" }, h("b", {}, "Discard"), v.discardTop !== null && small ? [h("br"), `top: ${v.discardTop}`] : "");
-  ui.table.className = `table ${small ? "small" : "big"}${dim ? " dim" : ""}`;
-  ui.table.replaceChildren(
-    h("div", { class: "slot" }, back, drawLabel),
-    h("div", { class: "slot" }, small ? [discardLabel, top] : [top, discardLabel]));
-
-  // info box: what to do, or what the player whose turn it is does
-  let title = "", sub = "";
-  let side = null; // beside the card in hand
-  if (v.phase === "setup") {
-    title = flipped < 2 ? "Flip two of your cards" : "Waiting for the others";
-    sub = flipped < 2 ? `${flipped} of 2 flipped. Tap a face-down card.` : "They are still flipping their cards.";
-  } else if (playing && !myTurn) {
-    title = h("span", {}, h("span", { class: cur.connected ? "dot" : "dot off" }), `${cur.name} is playing${cur.connected ? "" : " (disconnected)"}`);
-    sub = v.stage === "holding" ? `${v.heldFrom === "draw" ? "drew" : "took"} a ${v.held}` : v.stage === "flip" ? "flips a card" : "";
-  } else if (playing) {
-    if (v.stage === "choose") title = v.discardTop === null ? "Draw" : "Draw or take";
-    else if (v.stage === "flip") title = "Flip a card";
-    else side = canDiscard
-      ? [h("button", { class: "pick", onclick: () => act({ a: "discard" }) }, "Discard"), h("div", { class: "say" }, "or place")]
-      : h("div", { class: "say" }, "Place");
-  } else title = "Round over";
-  const text = h("div", { class: "say" }, title, sub && h("small", {}, sub));
-  const heldCard = playing && v.held !== null && v.stage === "holding";
-  ui.dock.className = `dock${playing && !myTurn ? " of-other" : ""}`;
-  ui.dock.replaceChildren(heldCard
-    ? h("div", { class: "hand" },
-      h("div", { class: `card ${cls(v.held)}`, "aria-label": myTurn ? `Card in hand: ${v.held}` : `${cur.name}'s card: ${v.held}` }, String(v.held)),
-      h("div", { class: "side" }, myTurn ? side : text))
-    : text);
-
-  // my grid
-  const clickable = (c) => {
-    if (!c) return false;
-    if (v.phase === "setup") return !c.up && flipped < 2;
-    if (!myTurn) return false;
-    if (v.stage === "holding") return true;
-    if (v.stage === "flip") return !c.up;
-    return false;
-  };
-  const kind = v.phase === "play" && v.stage === "holding" ? "swap" : "flip";
-  ui.mine.replaceChildren(h("div", { class: `mine-box${myTurn ? " turn" : ""}` },
-    h("div", { class: "name" }, h("span", { class: myTurn ? "who" : "" }, "You", myTurn && h("span", { class: "tag" }, "Your turn")), h("span", {}, `${gridSum(me)} shown · total ${me.total}`)),
-    h("div", { class: "grid" }, me.grid.map((c, i) => h("div", { class: "cell" }, cardEl(c, { pick: clickable(c), onclick: () => act({ a: kind, i }) }))))));
-
-  // reconnect buttons (host) and the scores / round result sheet
-  const away = role === "host" ? v.players.filter((p) => !p.connected) : [];
-  ui.overlay.replaceChildren(
-    ...away.map((p) => h("p", {}, h("button", { onclick: () => { openInvite(ui.invite, p.id); ui.invite.scrollIntoView(); } }, `${p.name} is disconnected. Reconnect`))));
-  ui.sheet.replaceChildren(...(sheetOpen ? scoreSheet(v) : []));
-}
-
-// Scores, and at the end of a round or game the result. Slides up over the grids.
-function scoreSheet(v) {
-  const over = v.phase === "gameEnd";
-  const ended = over || v.phase === "roundEnd";
-  const rounds = Math.max(...v.players.map((p) => p.rounds.length));
-  const last = rounds - 1;
-  const lowest = ended ? Math.min(...v.players.map((p) => p.rounds[last])) : null;
-  const head = h("tr", {}, h("th", {}, ""), Array.from({ length: rounds }, (_, i) => h("th", {}, `R${i + 1}`)), h("th", {}, "Total"));
-  const rows = v.players.map((p) => h("tr", { class: `${p.id === v.you ? "me" : ""}${ended && p.rounds[last] === lowest ? " best" : ""}${over && v.winner && v.winner.includes(p.id) ? " win" : ""}` },
-    h("td", {}, p.name), Array.from({ length: rounds }, (_, i) => h("td", {}, p.rounds[i] === undefined ? "" : String(p.rounds[i]))), h("td", {}, String(p.total))));
-  const parts = [h("div", { class: "grab" }), h("h2", {}, over ? "Game over" : v.phase === "roundEnd" ? `Round ${v.round} finished` : "Scores")];
-  if (over) parts.push(h("p", { class: "note" }, `Winner: ${v.winner.map((id) => v.players.find((p) => p.id === id).name).join(", ")} with ${Math.min(...v.players.map((p) => p.total))} points.`));
-  if (ended) {
-    const names = v.players.filter((p) => p.rounds[last] === lowest).map((p) => p.name).join(", ");
-    const c = v.closer !== null ? v.players[v.closer] : null;
-    parts.push(h("p", { class: "note" },
-      c ? `${c.name} ended the round${v.doubled ? " without the lowest score, so their points are doubled." : "."} ` : "",
-      `Lowest this round: ${names} (${lowest}).`));
-  }
-  parts.push(h("div", { class: "tablewrap" }, h("table", {}, head, rows)));
-  parts.push(h("p", { class: "note" }, `The game ends when someone reaches ${END_SCORE} points.`));
-  if (ended) {
-    parts.push(role === "host"
-      ? h("div", { class: "row" },
-        h("button", { class: "primary grow", onclick: () => act({ a: over ? "rematch" : "next" }) }, over ? "Play again" : "Next round"),
-        h("button", { onclick: () => { peek = true; updateGame(); } }, "Show cards"))
-      : h("div", { class: "row" },
-        h("p", { class: "soft grow" }, "Waiting for the host…"),
-        h("button", { onclick: () => { peek = true; updateGame(); } }, "Show cards")));
-  } else parts.push(h("button", { class: "primary", onclick: () => { showScores = false; updateGame(); } }, "Close"));
-  return [h("div", { class: "scrim", onclick: () => { if (ended) peek = true; else showScores = false; updateGame(); } }), h("div", { class: "sheet", role: "dialog", "aria-label": "Scores" }, parts)];
+// Host only: a button to bring back each player who dropped out.
+function showAway(v) {
+  if (role !== "host" || !table) return;
+  const away = v.players.filter((p) => !p.connected);
+  table.els.overlay.replaceChildren(
+    ...away.map((p) => h("button", { onclick: () => { openInvite(ui.invite, p.id); ui.invite.scrollIntoView(); } }, `${p.name} is disconnected. Reconnect`)));
 }
 
 home();
