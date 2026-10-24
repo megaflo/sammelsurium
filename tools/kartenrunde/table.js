@@ -290,7 +290,7 @@ function paint(sc, { freezeSums = false } = {}) {
   const canDiscard = myTurn && idle && v.stage === "holding" && v.heldFrom === "draw" && v.held !== null && mineP.grid.some((c) => c && !c.up);
   const usable = canTake || canDiscard;
   els.drawLabel.replaceChildren(h("b", {}, "Draw"), ` · ${v.drawCount}`);
-  els.discardLabel.replaceChildren(canTake ? h("b", {}, `Take the ${v.discardTop}`) : canDiscard ? h("b", {}, `Discard the ${v.held}`) : h("b", {}, "Discard"));
+  els.discardLabel.replaceChildren(canTake ? h("b", {}, `Take the ${v.discardTop}`) : canDiscard ? h("b", {}, `Discard ${v.held}`) : h("b", {}, "Discard"));
   setCard(els.drawTop, v.drawCount ? { up: false } : null);
   setCard(els.discardTop, v.discardTop === null ? null : { up: true, v: v.discardTop });
   setCard(els.discardUnder, v.under === null || v.under === undefined ? null : { up: true, v: v.under });
