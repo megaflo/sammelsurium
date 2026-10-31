@@ -25,6 +25,14 @@ export function cleanOutput(s) {
   return t;
 }
 
+const norm = (s) => s.toLowerCase().replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();
+const overlap = (a, b) => {
+  const A = new Set(words(a)), B = new Set(words(b));
+  const both = [...A].filter((w) => B.has(w)).length;
+  return both / (new Set([...A, ...B]).size || 1);
+};
+const CLAIM = /\bI(?:'m| was| were| am| went| saw| heard| stayed)\b[^.!?]*\b(in|at|out|home|there|alone|with|upstairs|downstairs|outside)\b/i;
+
 const sentences = (s) => (s.match(/[^.!?]+[.!?]+/g) || [s]).filter((x) => x.trim()).length;
 
 export function grade(c, raw, vocab) {
@@ -34,8 +42,10 @@ export function grade(c, raw, vocab) {
   if (META.test(out)) problems.push("meta text (\"here is...\", \"rewritten\", ...)");
   if (/\n/.test(out)) problems.push("more than one line");
   if (/(^|\n|\s)(mood|character|line|rewriter|the detective|detective)\s*:/i.test(out) || /^[A-Z][\w. ]{1,30}:\s/.test(out)) problems.push("label or prompt echo (\"Mood:\", \"Name:\", ...)");
-  let kept = null;
+  let kept = null, unchanged = false;
   if (c.kind === "rewrite") {
+    if (norm(out) === norm(c.text)) { problems.push("copied the input unchanged"); unchanged = true; }
+    else if (overlap(out, c.text) >= 0.85) { warnings.push("nearly unchanged"); unchanged = true; }
     const lower = out.toLowerCase();
     for (const t of c.facts.times) if (!out.includes(t)) problems.push(`lost time ${t}`);
     for (const r of c.facts.rooms) if (!lower.includes(r)) problems.push(`lost room "${r}"`);
@@ -50,38 +60,73 @@ export function grade(c, raw, vocab) {
     else if (kept < 0.4) warnings.push(`kept only ${Math.round(kept * 100)}% of the longer words`);
   } else {
     const n = wordCount(out);
-    const max = c.kind === "flourish" ? 15 : 40;
-    if (n < (c.kind === "flourish" ? 2 : 3)) problems.push("too short");
+    const short = c.kind === "flourish" || c.kind === "gesture";
+    const max = c.kind === "gesture" ? 10 : short ? 15 : 40;
+    if (n < (short ? 2 : 3)) problems.push("too short");
     if (n > max) problems.push(`too long (${n} words)`);
     if (/\d/.test(out)) problems.push("contains digits");
-    if (c.kind === "atmosphere" || c.kind === "flourish") {
+    if (c.kind === "gesture") {
+      if (!/^\*[^*]+\*$/.test(out)) problems.push("not a single *stage direction*");
+      if (/["“”]/.test(out)) problems.push("contains speech");
+    }
+    if (c.kind === "flourish" && CLAIM.test(out)) problems.push("claims where the character was or what they did");
+    if (c.kind === "atmosphere" || c.kind === "flourish" || c.kind === "gesture") {
       if (sentences(out) > 2) problems.push("more than two sentences");
       const m = out.match(BANNED_OBJECTS);
       if (m) problems.push(`names an object ("${m[0]}")`);
       const who = vocab.surnames.find((s) => new RegExp(`\\b${escapeRe(s)}\\b`, "i").test(out));
       if (who) problems.push(`names a person (${who})`);
-      const room = vocab.rooms.find((r) => out.toLowerCase().includes(r));
+      const room = vocab.rooms.find((r) => r !== c.room && out.toLowerCase().includes(r));
       if (room) problems.push(`names a room (${room})`);
     }
   }
-  return { out, pass: problems.length === 0, problems, warnings, kept };
+  return { out, pass: problems.length === 0, problems, warnings, kept, unchanged };
 }
 
 const SYSTEM = "You write dialogue and narration for a 1920s country-house murder mystery game. Reply with the requested text only: no quotation marks, no notes, no explanation.";
 
-export function buildMessages(c, modelId = "") {
+// Hand-written examples from an invented setting, so none of the test lines or rooms appear in them.
+const SHOTS = {
+  rewrite: [
+    ["Character: Dr. Quill, family physician.\nMood: afraid\n\nRewrite this line in the character's voice and mood. Keep the meaning. Keep every name, time and room exactly as written. Do not add new facts. Keep it about as long as the original.\n\nLine: I was in the boathouse from 8:10 pm until 9:00 pm, mending a net.",
+      "The boathouse, yes! From 8:10 pm until 9:00 pm. I was mending a net, that is all, I swear it."],
+    ["Character: Mrs. Pell, cook.\nMood: angry\n\nRewrite this line in the character's voice and mood. Keep the meaning. Keep every name, time and room exactly as written. Do not add new facts. Keep it about as long as the original.\n\nLine: The gardener left the greenhouse at 7:30 pm.",
+      "Left the greenhouse at 7:30 pm, did he? Without a word to anyone, the gardener!"],
+  ],
+  filler: [
+    ["Character: Dr. Quill, family physician.\nMood: afraid\n\nThe detective asks something that has nothing to do with the case. Write the character's reply in one or two short sentences, under 20 words.", "I... I really couldn't say, Inspector. Why do you ask me that?"],
+    ["Character: Mrs. Pell, cook.\nMood: angry\n\nThe detective asks something that has nothing to do with the case. Write the character's reply in one or two short sentences, under 20 words.", "What has that to do with anything? I have a kitchen to run."],
+  ],
+  flourish: [
+    ["Character: Dr. Quill, family physician.\nMood: afraid\n\nThe detective asks: \"Where were you this evening?\"\nWrite a short interjection, under 12 words, that this character says before answering. Do not answer the question. Do not mention any times, places, people or objects.", "Oh dear. Must we go into that?"],
+    ["Character: Mrs. Pell, cook.\nMood: angry\n\nThe detective asks: \"Where were you this evening?\"\nWrite a short interjection, under 12 words, that this character says before answering. Do not answer the question. Do not mention any times, places, people or objects.", "Hmph. Another question, is it?"],
+  ],
+  gesture: [
+    ["Character: Dr. Quill, family physician.\nMood: afraid\n\nWrite one short stage direction in asterisks, under 8 words, describing the character's body language while the detective speaks. No speech, no places, no objects.", "*wrings his hands, eyes darting*"],
+    ["Character: Mrs. Pell, cook.\nMood: angry\n\nWrite one short stage direction in asterisks, under 8 words, describing the character's body language while the detective speaks. No speech, no places, no objects.", "*folds her arms and glares*"],
+  ],
+  atmosphere: [
+    ["Write one sentence, under 25 words, of atmosphere for the boathouse of a manor house on a stormy night. Describe only light, sound, smell or weather. Do not mention people or objects.", "Rain needles the water outside, and the wind sighs through every gap in the boards."],
+    ["Write one sentence, under 25 words, of atmosphere for the greenhouse of a manor house on a stormy night. Describe only light, sound, smell or weather. Do not mention people or objects.", "Thunder grumbles far off, and the air smells of wet earth and old smoke."],
+  ],
+};
+
+export function buildMessages(c, modelId = "", fewShot = false) {
   let user;
   if (c.kind === "rewrite") {
     user = `Character: ${c.who}\nMood: ${c.mood}\n\nRewrite this line in the character's voice and mood. Keep the meaning. Keep every name, time and room exactly as written. Do not add new facts. Keep it about as long as the original.\n\nLine: ${c.text}`;
   } else if (c.kind === "filler") {
     user = `Character: ${c.who}\nMood: ${c.mood}\n\nThe detective asks something that has nothing to do with the case. Write the character's reply in one or two short sentences, under 20 words.`;
+  } else if (c.kind === "gesture") {
+    user = `Character: ${c.who}\nMood: ${c.mood}\n\nWrite one short stage direction in asterisks, under 8 words, describing the character's body language while the detective speaks. No speech, no places, no objects.`;
   } else if (c.kind === "flourish") {
     user = `Character: ${c.who}\nMood: ${c.mood}\n\nThe detective asks: "${c.question}"\nWrite a short interjection, under 12 words, that this character says before answering. Do not answer the question. Do not mention any times, places, people or objects.`;
   } else {
     user = `Write one sentence, under 25 words, of atmosphere for the ${c.room} of a manor house on a stormy night. Describe only light, sound, smell or weather. Do not mention people or objects.`;
   }
   if (/qwen3/i.test(modelId)) user += " /no_think";
-  return [{ role: "system", content: SYSTEM }, { role: "user", content: user }];
+  const shots = fewShot ? (SHOTS[c.kind] || []).flatMap(([u, a]) => [{ role: "user", content: u }, { role: "assistant", content: a }]) : [];
+  return [{ role: "system", content: SYSTEM }, ...shots, { role: "user", content: user }];
 }
 
 export function vocabOf(k) {
@@ -118,6 +163,9 @@ export function buildCases(k, { maxRewrite = 12 } = {}) {
   k.suspects.forEach((s, i) => {
     const q = k.dialog[s.id].questions.find((x) => x.id === "where");
     for (const mood of [MOODS[(i + 1) % 4], MOODS[(i + 2) % 4]]) cases.push({ kind: "flourish", id: `${s.id}/flourish`, who: who(s), mood, question: q.label });
+  });
+  k.suspects.forEach((s, i) => {
+    for (const mood of [MOODS[(i + 1) % 4], MOODS[(i + 3) % 4]]) cases.push({ kind: "gesture", id: `${s.id}/gesture`, who: who(s), mood });
   });
   for (const r of k.rooms) cases.push({ kind: "atmosphere", id: `${r.id}/atmosphere`, room: r.name.toLowerCase() });
   return { cases, vocab };

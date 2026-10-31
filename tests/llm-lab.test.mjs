@@ -17,6 +17,7 @@ test("test cases come from real dialog and carry their facts", () => {
     assert.ok(cases.filter((c) => c.kind === "rewrite").length >= 6);
     assert.equal(cases.filter((c) => c.kind === "atmosphere").length, 3);
     assert.equal(cases.filter((c) => c.kind === "flourish").length, 6);
+    assert.equal(cases.filter((c) => c.kind === "gesture").length, 6);
     for (const c of cases.filter((c) => c.kind === "rewrite")) {
       for (const t of c.facts.times) assert.ok(c.text.includes(t));
       for (const room of c.facts.rooms) assert.ok(c.text.toLowerCase().includes(room));
@@ -77,4 +78,46 @@ test("flourishes may not carry facts", () => {
   assert.match(grade(c, "Ah, the study again.", vocab).problems.join(), /room/);
   assert.match(grade(c, "Ask Thorne, not me.", vocab).problems.join(), /person/);
   assert.match(grade(c, "At 9 o'clock, ha.", vocab).problems.join(), /digits/);
+});
+
+test("a rewrite that copies the input fails; a near copy only warns", () => {
+  const g = grade(rw, "At 10:32 pm? I was in the study, alone.", vocab);
+  assert.ok(!g.pass && g.unchanged);
+  assert.match(g.problems.join(), /unchanged/);
+  const n = grade(rw, "Hmm. At 10:32 pm? I was in the study, alone.", vocab);
+  assert.ok(n.pass && n.unchanged);
+  assert.ok(n.warnings.includes("nearly unchanged"));
+  assert.ok(!grade(rw, "Alone in the study, at 10:32, as I said!", vocab).unchanged);
+});
+
+test("flourishes may not claim where the character was", () => {
+  const c = { kind: "flourish" };
+  assert.match(grade(c, "I was in my room, trying to work.", vocab).problems.join(), /claims/);
+  assert.match(grade(c, "I was out there, and I was alone.", vocab).problems.join(), /claims/);
+  assert.ok(grade(c, "I was afraid.", vocab).pass);
+});
+
+test("gestures are one stage direction without speech", () => {
+  const c = { kind: "gesture" };
+  assert.ok(grade(c, "*folds her arms and glares*", vocab).pass);
+  assert.match(grade(c, "She folds her arms.", vocab).problems.join(), /stage direction/);
+  assert.match(grade(c, '*mutters "no"*', vocab).problems.join(), /speech/);
+  assert.match(grade(c, "*glances at the study door*", vocab).problems.join(), /room/);
+});
+
+test("atmosphere may name its own room but not another", () => {
+  const c = { kind: "atmosphere", room: "study" };
+  const v = { rooms: ["study", "kitchen"], surnames: [] };
+  assert.ok(grade(c, "The study hums with wind and distant thunder.", v).pass);
+  assert.match(grade(c, "From the kitchen comes a distant clatter of wind.", v).problems.join(), /room/);
+});
+
+test("few-shot examples add turns before the real prompt and use no case rooms", () => {
+  const c = { kind: "gesture", who: "x", mood: "calm" };
+  const plain = buildMessages(c, "m");
+  const shot = buildMessages(c, "m", true);
+  assert.equal(plain.length, 2);
+  assert.equal(shot.length, 6);
+  assert.deepEqual(shot.at(-1), plain.at(-1));
+  assert.deepEqual(shot.slice(1, -1).map((m) => m.role), ["user", "assistant", "user", "assistant"]);
 });

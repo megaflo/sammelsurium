@@ -142,12 +142,14 @@ async function runTests() {
     const { cases, vocab } = buildCases(makeCase(parsed.code));
     run.caseCode = parsed.code;
     const temp = Number($("temp").value);
+    const fewShot = $("fewshot").checked;
+    run.fewShot = fewShot; run.temperature = temp;
     for (const [i, c] of cases.entries()) {
       status(`Case ${i + 1} of ${cases.length}: ${c.id}`);
       const t0 = performance.now();
       let raw = "", err = null;
       try {
-        const res = await current.pipe(buildMessages(c, current.id), { max_new_tokens: MAX_NEW, do_sample: temp > 0, temperature: temp > 0 ? temp : undefined, top_p: 0.9, repetition_penalty: 1.05, return_full_text: false });
+        const res = await current.pipe(buildMessages(c, current.id, fewShot), { max_new_tokens: MAX_NEW, do_sample: temp > 0, temperature: temp > 0 ? temp : undefined, top_p: 0.9, repetition_penalty: 1.05, return_full_text: false });
         const g = res[0].generated_text;
         raw = Array.isArray(g) ? g.at(-1).content : g;
       } catch (e) { err = String(e && e.message || e); }
@@ -156,7 +158,7 @@ async function runTests() {
       let tokens = null, generated = null;
       try { tokens = current.pipe.tokenizer.encode(r.out).length; generated = current.pipe.tokenizer.encode(raw).length; } catch {}
       if (!err && generated != null && generated >= MAX_NEW - 2) { r.problems.push("did not stop (hit the token limit)"); r.pass = false; }
-      const rec = { id: c.id, kind: c.kind, mood: c.mood || null, input: c.text || c.room || null, output: r.out, pass: r.pass, problems: r.problems, warnings: r.warnings, kept: r.kept == null ? null : Math.round(r.kept * 100) / 100, ms, tokens };
+      const rec = { id: c.id, kind: c.kind, mood: c.mood || null, input: c.text || c.room || null, output: r.out, pass: r.pass, unchanged: !!r.unchanged, problems: r.problems, warnings: r.warnings, kept: r.kept == null ? null : Math.round(r.kept * 100) / 100, ms, tokens };
       run.cases.push(rec);
       addRow(rec);
       await new Promise((r) => setTimeout(r));
@@ -184,9 +186,9 @@ function addRow(c) {
 
 function summarize(run) {
   const by = {};
-  for (const c of run.cases) { const s = (by[c.kind] ||= { n: 0, pass: 0, ms: 0, tokens: 0 }); s.n++; s.pass += c.pass; s.ms += c.ms; s.tokens += c.tokens || 0; }
-  run.summary = Object.fromEntries(Object.entries(by).map(([k, s]) => [k, { pass: `${s.pass}/${s.n}`, avgMs: Math.round(s.ms / s.n), tokensPerSec: s.ms ? Math.round(s.tokens / (s.ms / 1000) * 10) / 10 : null }]));
-  $("summary").textContent = Object.entries(run.summary).map(([k, s]) => `${k}: ${s.pass} passed, ${s.avgMs} ms avg, ${s.tokensPerSec} tok/s`).join(" · ");
+  for (const c of run.cases) { const s = (by[c.kind] ||= { n: 0, pass: 0, ms: 0, tokens: 0, unchanged: 0 }); s.n++; s.pass += c.pass; s.unchanged += c.unchanged ? 1 : 0; s.ms += c.ms; s.tokens += c.tokens || 0; }
+  run.summary = Object.fromEntries(Object.entries(by).map(([k, s]) => [k, { pass: `${s.pass}/${s.n}`, ...(s.unchanged ? { unchanged: s.unchanged } : {}), avgMs: Math.round(s.ms / s.n), tokensPerSec: s.ms ? Math.round(s.tokens / (s.ms / 1000) * 10) / 10 : null }]));
+  $("summary").textContent = Object.entries(run.summary).map(([k, s]) => `${k}: ${s.pass} passed${s.unchanged ? ` (${s.unchanged} unchanged)` : ""}, ${s.avgMs} ms avg, ${s.tokensPerSec} tok/s`).join(" · ");
 }
 
 async function hub(path) {
