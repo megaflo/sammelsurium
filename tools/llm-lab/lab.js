@@ -165,6 +165,39 @@ function summarize(run) {
   $("summary").textContent = Object.entries(run.summary).map(([k, s]) => `${k}: ${s.pass} passed, ${s.avgMs} ms avg, ${s.tokensPerSec} tok/s`).join(" · ");
 }
 
+async function hub(path) {
+  const r = await fetch("https://huggingface.co/api/" + path);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  return r.json();
+}
+
+// Looks a repo up without downloading it: does it exist, and which ONNX files (with sizes) does it offer?
+$("check").onclick = async () => {
+  const id = modelId();
+  try {
+    const m = await hub(`models/${id}?blobs=true`);
+    const onnx = (m.siblings || []).filter((f) => /\.onnx(_data)?$/.test(f.rfilename)).map((f) => `${f.rfilename} ${mb(f.size)}`);
+    log(`${id}: found. private=${m.private} gated=${m.gated}. ONNX files:\n  ${onnx.join("\n  ") || "(none)"}`);
+    status(`${id}: found, ${onnx.length} ONNX files.`);
+  } catch (e) {
+    log(`${id}: ${e.message}. A 401 or 404 means the repo does not exist, or is private or gated.`);
+    status(`${id}: ${e.message}`);
+  }
+};
+
+// Fills the model list from a Hub search, most downloaded first.
+$("findBtn").onclick = async () => {
+  const q = $("find").value.trim();
+  if (!q) return;
+  try {
+    const list = await hub(`models?search=${encodeURIComponent(q)}&filter=onnx&sort=downloads&direction=-1&limit=15`);
+    if (!list.length) { log(`search "${q}": no results`); return; }
+    $("model").innerHTML = list.map((m) => `<option value="${m.id}">${m.id} (${m.downloads ?? "?"} downloads)</option>`).join("");
+    log(`search "${q}": ${list.map((m) => m.id).join(", ")}`);
+    status(`${list.length} models found; pick one in the Model list.`);
+  } catch (e) { log(`search failed: ${e.message}`); status("Search failed: " + e.message); }
+};
+
 $("load").onclick = () => load({ offline: false });
 $("offline").onclick = () => load({ offline: true });
 $("run").onclick = runTests;
