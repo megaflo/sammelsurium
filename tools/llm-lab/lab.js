@@ -66,9 +66,24 @@ async function load({ offline }) {
   const run = { label: offline ? "offline check" : "download", model: id, dtype, device, downloadedBytes: 0, loadMs: null, error: null, cases: [], env: null, storageBefore: await storageInfo() };
   runs.push(run);
   const files = new Map();
+  const realFetch = globalThis.fetch;
+  let envRef = null, realEnvFetch;
   try {
     const { pipeline, env } = await importLib();
-    env.allowRemoteModels = !offline;
+    envRef = env;
+    if (offline) {
+      // Reads from the Cache API do not use fetch, so a fully cached model still loads. Anything that needs the network fails and is logged.
+      run.blockedRequests = [];
+      const blocked = (input) => {
+        const url = String(input && input.url || input);
+        run.blockedRequests.push(url);
+        log("blocked network request: " + url);
+        return Promise.reject(new TypeError("network blocked by the offline check"));
+      };
+      globalThis.fetch = blocked;
+      realEnvFetch = env.fetch;
+      if ("fetch" in env) env.fetch = blocked;
+    }
     if (current) { try { await current.pipe.dispose(); } catch {} current = null; }
     $("bar").hidden = false; $("bar").value = 0;
     const t0 = performance.now();
@@ -96,7 +111,8 @@ async function load({ offline }) {
     log("ERROR: " + run.error);
     status("Failed: " + run.error);
   } finally {
-    if (lib?.env) lib.env.allowRemoteModels = true;
+    globalThis.fetch = realFetch;
+    if (envRef && realEnvFetch !== undefined) envRef.fetch = realEnvFetch;
     run.env = await environment();
     run.storageAfter = await storageInfo();
     $("bar").hidden = true;
