@@ -133,7 +133,7 @@ function briefing() {
     <p class="lead">${esc(K.briefing)}</p>
     <div class="panel"><h2>Suspects</h2><ul class="cast">${sus}</ul></div>
     <div class="panel"><h2>Rooms</h2><ul class="cast rooms">${rooms}</ul></div>
-    <div class="panel"><h2>Your job</h2>${job}<p>Expect plenty of red herrings: most clues lead nowhere. There's no time limit, but you only get one accusation.</p></div>
+    <div class="panel"><h2>Your job</h2>${job}<p>Expect dead ends: many clues lead nowhere, and any of the suspects may be lying to you. There's no time limit, but you only get one accusation.</p></div>
     <button class="primary wide" data-act="start">Start investigating</button>
   </section>`;
 }
@@ -300,9 +300,9 @@ function interrogatorView() {
   const mood = last ? last.mood : "calm";
   const obsSeen = d.observations.filter((o) => st.seen[`${s.id}:${o.id}`]);
   const highlight = last && last.highlight;
-  const lost = s.role === "M";
+  const lost = !!s.lost;
   const tabs = K.suspects.map((x) => `<button class="stab ${x.id === s.id ? "on" : ""}" data-act="suspect" data-id="${x.id}">
-      <span class="face">${portrait(x.lib.look, { mood: st.last[x.id] ? st.last[x.id].mood : "calm", lost: x.role === "M", label: x.name })}</span><span>${esc(x.short)}</span></button>`).join("");
+      <span class="face">${portrait(x.lib.look, { mood: st.last[x.id] ? st.last[x.id].mood : "calm", lost: !!x.lost, label: x.name })}</span><span>${esc(x.short)}</span></button>`).join("");
   const qs = d.questions.filter((q) => hasAll(q.requires)).map((q) => {
     const done = st.asked[`${s.id}:${q.id}`];
     return `<li><button class="q ${done ? "done" : ""}" data-act="ask" data-id="${q.id}"><span>${esc(q.label)}</span><span class="meta">${done ? "asked ✓" : ""}</span></button></li>`;
@@ -444,7 +444,7 @@ function accuse() {
     <h1>The accusation</h1>
     <p>You get one try. Agree with your partner before you confirm.</p>
     <h2>Who did it?</h2>
-    <div class="pick three">${K.suspects.map((s) => `<button class="${a.suspect === s.id ? "on" : ""}" data-act="pick" data-k="suspect" data-v="${s.id}"><span class="face">${role === "I" ? portrait(s.lib.look, { lost: s.role === "M", label: s.name }) : icon("person")}</span><span>${esc(s.short)}</span></button>`).join("")}</div>
+    <div class="pick three">${K.suspects.map((s) => `<button class="${a.suspect === s.id ? "on" : ""}" data-act="pick" data-k="suspect" data-v="${s.id}"><span class="face">${role === "I" ? portrait(s.lib.look, { lost: !!s.lost, label: s.name }) : icon("person")}</span><span>${esc(s.short)}</span></button>`).join("")}</div>
     <h2>With what?</h2>
     <div class="pick weapons">${WEAPONS.map((w) => `<button class="${a.weapon === w.id ? "on" : ""}" data-act="pick" data-k="weapon" data-v="${w.id}">${icon(w.id)}<span>${esc(w.name)}</span></button>`).join("")}</div>
     <h2>Why?</h2>
