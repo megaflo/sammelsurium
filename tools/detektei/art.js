@@ -107,11 +107,15 @@ const F = {
     return p(`M${w * 0.08} 0H${w * 0.92}L${w} ${h}H0z`, "#7a2a2a") + p(`M${w * 0.14} 4H${w * 0.86}L${w * 0.93} ${h - 4}H${w * 0.07}z`, "none", `stroke="#d9b36a" stroke-width="2"`) + e(w / 2, h / 2, w * 0.18, h * 0.24, "#2d3f5a");
   },
   window(w, h, t) {
-    let s = r(0, 0, w, h * 0.1, t.wood2) + r(w * 0.18, h * 0.1, w * 0.64, h * 0.78, "#d8d2c0");
-    s += r(w * 0.22, h * 0.13, w * 0.56, h * 0.72, "#0f1d30");
-    s += c(w * 0.62, h * 0.3, 6, "#e9e4c8", `opacity=".75"`);
-    for (let i = 0; i < 9; i++) s += l(w * (0.25 + (i % 5) * 0.11), h * (0.18 + (i * 0.07) % 0.6), w * (0.23 + (i % 5) * 0.11), h * (0.27 + (i * 0.07) % 0.6), "#7d97b3", 1, `opacity=".6"`);
-    s += r(w * 0.49, h * 0.13, 2, h * 0.72, "#d8d2c0") + r(w * 0.22, h * 0.48, w * 0.56, 2, "#d8d2c0");
+    let s = r(0, 0, w, h * 0.1, t.wood2);
+    // A glass wall needs no window of its own: just the curtains, pelmet and sill hung against it.
+    if (t.pattern !== "glass") {
+      s += r(w * 0.18, h * 0.1, w * 0.64, h * 0.78, "#d8d2c0");
+      s += r(w * 0.22, h * 0.13, w * 0.56, h * 0.72, "#0f1d30");
+      s += c(w * 0.62, h * 0.3, 6, "#e9e4c8", `opacity=".75"`);
+      for (let i = 0; i < 9; i++) s += l(w * (0.25 + (i % 5) * 0.11), h * (0.18 + (i * 0.07) % 0.6), w * (0.23 + (i % 5) * 0.11), h * (0.27 + (i * 0.07) % 0.6), "#7d97b3", 1, `opacity=".6"`);
+      s += r(w * 0.49, h * 0.13, 2, h * 0.72, "#d8d2c0") + r(w * 0.22, h * 0.48, w * 0.56, 2, "#d8d2c0");
+    }
     s += r(w * 0.16, h * 0.86, w * 0.68, h * 0.07, "#cfc7b2");
     const cur = t.curtain || "#7a2333";
     s += p(`M0 ${h * 0.1}H${w * 0.24}Q${w * 0.16} ${h * 0.55} ${w * 0.22} ${h}H0z`, cur) + p(`M${w} ${h * 0.1}H${w * 0.76}Q${w * 0.84} ${h * 0.55} ${w * 0.78} ${h}H${w}z`, cur);
