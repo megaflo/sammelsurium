@@ -34,12 +34,13 @@ test("every case is solvable together but not alone", () => {
   }
 });
 
-test("each detective alone gets stuck before the weapon, the motive and the murderer's lie", () => {
-  const k = makeCase(codes(1, 11)[0]);
-  const nodes = nodesOf(k);
-  const F = nodes.filter((n) => n.who === "F" && n.requires.length === 0).flatMap((n) => n.gives);
-  assert.ok(!F.includes("clue:weapon") && !F.includes("clue:motiveM") && !F.includes("clue:token"));
-  assert.ok(F.includes("clue:body"));
+test("the field agent alone never finds the weapon or the murderer's dropped token", () => {
+  for (const c of codes(50, 11)) {
+    const k = makeCase(c);
+    const F = nodesOf(k).filter((n) => n.who === "F" && n.requires.length === 0).flatMap((n) => n.gives);
+    assert.ok(!F.includes("clue:weapon") && !F.includes(`clue:${k.hints.hToken.clue}`), c);
+    assert.ok(F.includes("clue:body"), c);
+  }
 });
 
 test("cases are well formed", () => {
@@ -47,7 +48,8 @@ test("cases are well formed", () => {
     const k = makeCase(c);
     assert.equal(k.suspects.length, 3);
     assert.equal(new Set(k.suspects.map((s) => s.lib.tone)).size, 3, "hair colours must tell suspects apart");
-    assert.deepEqual(k.suspects.map((s) => s.role).sort(), ["H", "M", "R"]);
+    assert.equal(k.suspects.filter((s) => s.role === "M").length, 1);
+    assert.ok(k.suspects.every((s) => ["M", "L", "H"].includes(s.role)));
     assert.equal(k.rooms.length, 3);
     assert.equal(k.rooms.filter((r) => r.furniture.some((f) => f.kind === "body")).length, 1);
     const all = [...Object.values(k.clues), ...Object.values(k.hints)];
@@ -69,16 +71,75 @@ test("cases are well formed", () => {
   }
 });
 
-test("most clues are red herrings, and named suspects can explain theirs", () => {
-  for (const c of codes(200, 23)) {
-    const k = makeCase(c);
-    const ids = Object.keys(k.clues);
-    const herrings = ids.filter((id) => id.startsWith("noise") || id === "decoy" || id === "motiveH");
-    assert.ok(herrings.length > ids.length - herrings.length, `${c}: ${herrings.length} of ${ids.length}`);
-    for (const s of k.suspects) for (const [cid, r] of Object.entries(k.dialog[s.id].confront)) {
-      if (cid.startsWith("noise")) assert.match(k.clues[cid].text, new RegExp(s.short.replace(/\./g, "\\.") + "|\\b" + s.lib.surname[0] + "\\b"), cid);
-      assert.ok(r.text.length > 0);
+// Who owns a find or a dropped token: the one suspect with a confrontation for it.
+const ownerOf = (k, id) => k.suspects.find((s) => k.dialog[s.id].confront[id]);
+const roomOfClue = (k, id) => {
+  const leaf = Object.entries(k.content).find(([, c]) => c.clue === id);
+  if (leaf) return leaf[0].split(".")[0];
+  return Object.values(k.hiddenSpots).find((h) => h.clue === id).room;
+};
+const many = codes(400, 23).map(makeCase);
+
+test("any number of the other two suspects may lie", () => {
+  const liars = new Set(many.map((k) => k.suspects.filter((s) => s.role === "L").length));
+  assert.deepEqual([...liars].sort(), [0, 1, 2]);
+});
+
+test("every kind of find is harmless in some cases and leads somewhere in others", () => {
+  const seen = {};
+  for (const k of many) for (const [id, c] of Object.entries(k.clues)) {
+    if (!id.startsWith("find")) continue;
+    const reply = k.dialog[ownerOf(k, id).id].confront[id];
+    const matters = reply.gives.length > 0 || /no dust/.test(c.text) || Object.values(k.hiddenSpots).some((h) => h.clue === id);
+    (seen[c.title] ||= new Set()).add(matters);
+  }
+  for (const [title, s] of Object.entries(seen)) assert.equal(s.size, 2, title);
+});
+
+test("dialogue and looks don't give away who plays which part", () => {
+  const lines = {};
+  const add = (key, role, text) => ((lines[key] ||= {})[role] ||= new Set()).add(text);
+  for (const k of many) for (const s of k.suspects) {
+    const d = k.dialog[s.id];
+    const plain = (t) => t.slice(s.lib.voice.length).replaceAll(k.victim.short, "{V}").replaceAll(k.time, "{T}");
+    for (const q of d.questions) {
+      assert.equal(q.mood, "calm");
+      if (q.id === "evening") add("evening", s.role, plain(q.text));
+      if (q.id === "noticed" && !q.gives.length) add("noticed", s.role, plain(q.text));
     }
+    add("lost", s.role, s.lost);
+    add("observations", s.role, d.observations.length);
+  }
+  for (const [key, byRole] of Object.entries(lines)) {
+    const all = new Set(Object.values(byRole).flatMap((x) => [...x]));
+    for (const role of ["M", "L", "H"]) assert.deepEqual([...byRole[role]].sort(), [...all].sort(), `${key} for ${role}`);
+  }
+});
+
+test("only the murderer left something fresh at the scene, and the weapon hair fits only the murderer", () => {
+  for (const k of many) {
+    const M = k.suspects.find((s) => s.role === "M");
+    for (const [id, c] of Object.entries(k.clues)) {
+      if (!/no dust/.test(c.text) || roomOfClue(k, id) !== k.scene) continue;
+      assert.equal(ownerOf(k, id), M, `${k.code} ${id}`);
+    }
+    for (const s of k.suspects) if (s !== M) assert.doesNotMatch(k.clues.weapon.text, new RegExp(`\\b${s.lib.tone}\\b`));
+  }
+});
+
+test("suspects explain the finds they own, and only those", () => {
+  for (const k of many) for (const id of Object.keys(k.clues).filter((x) => x.startsWith("find") || x.startsWith("token_"))) {
+    const owners = k.suspects.filter((s) => k.dialog[s.id].confront[id]);
+    assert.equal(owners.length, 1, `${k.code} ${id}`);
+    const o = owners[0];
+    if (id.startsWith("find")) assert.match(k.clues[id].text, new RegExp(o.short.replace(/\./g, "\\.") + "|\\b" + o.lib.surname[0] + "\\b"), id);
+  }
+});
+
+test("papers only hang on walls", () => {
+  for (const k of many) for (const r of k.rooms) for (const l of r.furniture.flatMap(leaves)) {
+    const c = k.content[l.id];
+    if (l.tag === "w" && c.clue) assert.match(c.clue, /^(find\d+|motive_)/, l.id);
   }
 });
 
