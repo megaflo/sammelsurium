@@ -120,4 +120,38 @@ test("few-shot examples add turns before the real prompt and use no case rooms",
   assert.equal(shot.length, 6);
   assert.deepEqual(shot.at(-1), plain.at(-1));
   assert.deepEqual(shot.slice(1, -1).map((m) => m.role), ["user", "assistant", "user", "assistant"]);
+  const angry = buildMessages({ kind: "gesture", who: "x", mood: "angry" }, "m", true);
+  assert.match(angry[1].content, /Mood: angry/);
+  assert.match(angry[3].content, /Mood: calm/);
+});
+
+test("few-shot examples contain no case rooms and obey the task's own rules", () => {
+  const v = { rooms: ["library", "study", "kitchen"], surnames: [], names: [] };
+  for (const kind of ["filler", "flourish", "gesture"]) {
+    for (const mood of ["calm", "uneasy", "afraid", "angry"]) {
+      const m = buildMessages({ kind, who: "x", mood, question: "q" }, "m", true);
+      for (let i = 2; i < m.length - 1; i += 2) assert.ok(grade({ kind }, m[i].content, v).pass, `${kind}/${mood}: ${m[i].content}`);
+    }
+  }
+});
+
+test("thinking tags and leaked reasoning are handled", () => {
+  assert.equal(cleanOutput("<think>\n\n*folds his arms*"), "*folds his arms*");
+  assert.match(grade({ kind: "flourish" }, "<think>\n\nOkay, so the user wants me to write a line.", vocab).problems.join(), /meta/);
+});
+
+test("rewrites that drop a whole sentence fail", () => {
+  const c = { kind: "rewrite", text: "I wasn't in the dining room. I owed Lord Thorne money. A great deal. Lord Thorne wasn't the forgiving kind.", facts: { times: [], rooms: ["dining room"], names: [] } };
+  const g = grade(c, "I wasn't in the dining room, no. Lord Thorne wasn't the forgiving kind, you see.", { rooms: ["dining room"], surnames: [] });
+  assert.match(g.problems.join(), /dropped: "I owed Lord Thorne money/);
+});
+
+test("filler must be first-person speech without claims or names", () => {
+  const v = { rooms: ["kitchen"], surnames: ["Hale"], names: ["Hale", "Felix"] };
+  assert.ok(grade({ kind: "filler" }, "I... I couldn't say, Inspector. Why do you ask?", v).pass);
+  assert.match(grade({ kind: "filler" }, "I've been here all day, sir.", v).problems.join(), /claims/);
+  assert.match(grade({ kind: "filler" }, "Felix looked at the clock and smiled.", v).problems.join(), /narration|person/);
+  assert.match(grade({ kind: "filler" }, "Colonel Hale smiled, eyes on the clock.", v).problems.join(), /person/);
+  assert.ok(grade({ kind: "flourish" }, "I'm sorry, I've been... distracted.", v).pass);
+  assert.match(grade({ kind: "flourish" }, "I was... preparing dinner.", v).problems.join(), /claims/);
 });
