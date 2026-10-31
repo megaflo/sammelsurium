@@ -60,13 +60,14 @@ export function parseCaseCode(input) {
 export const normCode = (s) => String(s).toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 // ---------- library: people ----------
+// look: how the body is drawn on the floor. hair is "bald", "short" or "long".
 export const VICTIMS = [
-  { name: "Lord Ambrose Thorne", short: "Lord Thorne" },
-  { name: "Lady Cordelia Blackwood", short: "Lady Blackwood" },
-  { name: "Sir Jasper Wren", short: "Sir Jasper" },
-  { name: "Lady Honoria Vale", short: "Lady Vale" },
-  { name: "Mr. Silas Grimshaw", short: "Mr. Grimshaw" },
-  { name: "Mrs. Edith Marlowe", short: "Mrs. Marlowe" },
+  { name: "Lord Ambrose Thorne", short: "Lord Thorne", look: { hair: "bald", hairColor: "#9a9a96", suit: "#2b2a33", shirt: "#f4efe2" } },
+  { name: "Lady Cordelia Blackwood", short: "Lady Blackwood", look: { hair: "long", hairColor: "#2a1f1d", suit: "#5a2a4a", shirt: "#e9dcc8", dress: true } },
+  { name: "Sir Jasper Wren", short: "Sir Jasper", look: { hair: "short", hairColor: "#6b4a2b", suit: "#3a3f4a", shirt: "#f4efe2" } },
+  { name: "Lady Honoria Vale", short: "Lady Vale", look: { hair: "long", hairColor: "#b9b6b0", suit: "#2f5a4a", shirt: "#e9dcc8", dress: true } },
+  { name: "Mr. Silas Grimshaw", short: "Mr. Grimshaw", look: { hair: "short", hairColor: "#1f1b1b", suit: "#4a3a2a", shirt: "#f4efe2" } },
+  { name: "Mrs. Edith Marlowe", short: "Mrs. Marlowe", look: { hair: "long", hairColor: "#7a4a2a", suit: "#2f3f6a", shirt: "#e9dcc8", dress: true } },
 ];
 export const MANORS = ["Thornbury Hall", "Ravenscourt", "Hollowmere Manor", "Blackwood House", "Wrenfield Park", "Ashgrove Manor"];
 
@@ -476,11 +477,11 @@ const fmtTime = (mins) => {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 };
 
-function layoutRoom(room, isScene) {
+function layoutRoom(room, victim) {
   const furniture = room.furniture.map(([kind, x, y, w, h], i) => ({ kind, x, y, w, h, id: `${room.id}.${i}` }));
-  if (isScene) {
+  if (victim) {
     const [x, y, w, h] = room.body;
-    furniture.push({ kind: "body", x, y, w, h, id: `${room.id}.body` });
+    furniture.push({ kind: "body", x, y, w, h, id: `${room.id}.body`, look: victim.look });
   }
   const abs = (box, r) => ({ x: box.x + r[0] * box.w, y: box.y + r[1] * box.h, w: r[2] * box.w, h: r[3] * box.h });
   const mk = (box, def, parentId) => {
@@ -525,7 +526,7 @@ function build(code, attempt) {
   const W = R.pick(others(M)); // saw the weapon being hidden
 
   // Rooms: the scene plus two more. Every pair of rooms offers at least three activities to claim.
-  const rooms = R.shuffle(ROOMS).slice(0, 3).map((r, i) => layoutRoom(r, i === 0));
+  const rooms = R.shuffle(ROOMS).slice(0, 3).map((r, i) => layoutRoom(r, i === 0 ? victim : null));
   const [S, A, B] = rooms;
   const roomOf = (f) => rooms.find((r) => r.furniture.includes(f));
 

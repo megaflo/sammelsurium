@@ -283,18 +283,24 @@ const F = {
     s += r(w * 0.46, h * 0.08, 4, h * 0.38, "#c9a24a") + p(`M${w * 0.24} ${h * 0.16}H${w * 0.76}L${w * 0.66} -${h * 0.1}H${w * 0.34}z`, "#e8c97a") + e(w * 0.5, h * 0.18, w * 0.26, 2, "#00000022");
     return s;
   },
-  body(w, h) {
-    // A figure lying on the floor, head to the left, one arm thrown out.
+  body(w, h, t, rnd, f) {
+    // A figure lying on the floor, head to the left, one arm thrown out. f.look sets hair, clothes and build.
+    const L = (f && f.look) || { hair: "short", hairColor: "#6a6a6a", suit: "#2b2a33", shirt: "#f4efe2" };
+    const skin = "#e4c2a8", dress = !!L.dress;
     let s = e(w * 0.55, h * 0.78, w * 0.48, h * 0.16, "#00000040");
-    // Head first, so the shoulders overlap it and it stays attached to the body.
     const hr = h * 0.15, hx = w * 0.18 - hr * 0.6, hy = h * 0.52;
-    s += c(hx, hy, hr, "#e4c2a8");
-    s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.98} ${h * 0.44}L${w * 0.98} ${h * 0.62}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, "#2b2a33");
-    s += p(`M${w * 0.6} ${h * 0.52}L${w * 0.98} ${h * 0.5}`, "none", `stroke="#1c1b22" stroke-width="2"`);
-    s += p(`M${w * 0.3} ${h * 0.36}Q${w * 0.32} ${h * 0.12} ${w * 0.42} ${h * 0.04}`, "none", `stroke="#2b2a33" stroke-width="${h * 0.12}" stroke-linecap="round"`);
-    s += c(w * 0.43, h * 0.04, h * 0.07, "#e4c2a8");
-    s += p(`M${hx - hr * 0.95} ${hy - hr * 0.1}Q${hx - hr * 0.6} ${hy - hr * 1.3} ${hx + hr * 0.4} ${hy - hr * 0.95}Q${hx + hr * 0.1} ${hy - hr * 0.5} ${hx - hr * 0.2} ${hy - hr * 0.1}z`, "#6a6a6a");
-    s += r(w * 0.2, h * 0.44, w * 0.05, h * 0.12, "#f4efe2");
+    // Long hair spreads on the floor behind the head.
+    if (L.hair === "long") s += p(`M${hx + hr * 0.3} ${hy - hr * 1.1}Q${hx - hr * 2.4} ${hy - hr * 0.8} ${hx - hr * 2.1} ${hy + hr * 0.9}Q${hx - hr * 0.6} ${hy + hr * 1.3} ${hx + hr * 0.4} ${hy + hr * 0.9}z`, L.hairColor);
+    // Head first, so the shoulders overlap it and it stays attached to the body.
+    s += c(hx, hy, hr, skin);
+    s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.98} ${h * (dress ? 0.3 : 0.44)}L${w * 0.98} ${h * (dress ? 0.78 : 0.62)}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
+    s += p(`M${w * 0.6} ${h * 0.52}L${w * 0.98} ${h * 0.5}`, "none", `stroke="#00000055" stroke-width="2"`);
+    s += p(`M${w * 0.3} ${h * 0.36}Q${w * 0.32} ${h * 0.12} ${w * 0.42} ${h * 0.04}`, "none", `stroke="${L.suit}" stroke-width="${h * 0.12}" stroke-linecap="round"`);
+    s += c(w * 0.43, h * 0.04, h * 0.07, skin);
+    if (L.hair === "bald") s += p(`M${hx - hr * 0.95} ${hy - hr * 0.1}Q${hx - hr * 0.6} ${hy - hr * 1.3} ${hx + hr * 0.4} ${hy - hr * 0.95}Q${hx + hr * 0.1} ${hy - hr * 0.5} ${hx - hr * 0.2} ${hy - hr * 0.1}z`, L.hairColor);
+    else if (L.hair === "short") s += p(`M${hx - hr} ${hy}Q${hx - hr} ${hy - hr * 1.2} ${hx + hr * 0.3} ${hy - hr}Q${hx - hr * 0.1} ${hy - hr * 0.3} ${hx - hr * 0.1} ${hy}z`, L.hairColor);
+    else s += p(`M${hx - hr} ${hy + hr * 0.2}Q${hx - hr} ${hy - hr * 1.2} ${hx + hr * 0.4} ${hy - hr}Q${hx - hr * 0.2} ${hy - hr * 0.3} ${hx - hr * 0.2} ${hy + hr * 0.2}z`, L.hairColor);
+    s += dress ? p(`M${w * 0.2} ${h * 0.46}L${w * 0.27} ${h * 0.46}L${w * 0.25} ${h * 0.56}L${w * 0.2} ${h * 0.55}z`, L.shirt) + c(w * 0.24, h * 0.58, 2.4, "#e8e0d0") : r(w * 0.2, h * 0.44, w * 0.05, h * 0.12, L.shirt);
     s += c(w * 0.44, h * 0.14, 2.2, "#c9a24a");
     return s;
   },
@@ -305,7 +311,7 @@ export function roomArt(room, opts = {}) {
   const t = THEMES[room.theme];
   let s = backdrop(t);
   const order = room.furniture.slice().sort((a, b) => (a.kind === "rug" || a.kind === "body" ? -1 : 0) - (b.kind === "rug" || b.kind === "body" ? -1 : 0) || (a.y + a.h) - (b.y + b.h));
-  for (const f of order) s += g(f.x, f.y, F[f.kind](f.w, f.h, t, seq(f.id)));
+  for (const f of order) s += g(f.x, f.y, F[f.kind](f.w, f.h, t, seq(f.id), f));
   for (const h of opts.revealed || []) {
     s += `<g class="opened">${r(n(h.x), n(h.y), n(h.w), n(h.h), "#0d0907", `rx="2" stroke="#e8c15a" stroke-width="1.5" stroke-dasharray="3 2"`)}${p(`M${n(h.x + h.w / 2)} ${n(h.y + h.h / 2 - 5)}l1.6 3.4 3.4 1.6-3.4 1.6-1.6 3.4-1.6-3.4-3.4-1.6 3.4-1.6z`, "#f2d27a")}</g>`;
   }
