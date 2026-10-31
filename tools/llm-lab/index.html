@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LLM lab</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 15px/1.45 system-ui, sans-serif; max-width: 52rem; margin: 1.5rem auto; padding: 0 1rem; }
+  fieldset { margin: 1rem 0; border: 1px solid #8884; border-radius: 6px; }
+  label { display: inline-block; margin: .25rem .75rem .25rem 0; }
+  input[type=text] { width: 22rem; max-width: 100%; }
+  button { margin: .25rem .4rem .25rem 0; padding: .35rem .7rem; }
+  progress { width: 100%; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  td, th { border-top: 1px solid #8883; padding: .3rem .4rem; vertical-align: top; text-align: left; }
+  .ok { color: #2a9d5c; } .bad { color: #d0463b; } .soft { opacity: .65; }
+  pre { white-space: pre-wrap; background: #8881; padding: .5rem; border-radius: 4px; max-height: 14rem; overflow: auto; }
+  td.out { max-width: 22rem; }
+</style>
+</head>
+<body>
+<h1>LLM lab</h1>
+<p class="soft">Downloads a small model into this browser and tests how well it rewrites Detektei dialog. Everything runs locally after the download. Use Copy report at the end and send the result back.</p>
+
+<fieldset><legend>Model</legend>
+  <label>Model <select id="model"></select></label>
+  <label>or custom repo <input type="text" id="custom" placeholder="onnx-community/..."></label><br>
+  <label>Precision <select id="dtype"><option>q4</option><option>q4f16</option><option>q8</option><option>fp16</option><option>fp32</option></select></label>
+  <label>Device <select id="device"><option value="webgpu">webgpu</option><option value="wasm">wasm (cpu)</option></select></label>
+  <label>Temperature <input type="number" id="temp" value="0.7" min="0" max="1.5" step="0.1" style="width:4rem"></label><br>
+  <label>Library <input type="text" id="lib" value="https://cdn.jsdelivr.net/npm/@huggingface/transformers@3"></label>
+</fieldset>
+
+<fieldset><legend>Test material</legend>
+  <label>Detektei case number <input type="text" id="code" style="width:9rem"></label>
+  <span class="soft" id="codeMsg"></span>
+</fieldset>
+
+<div>
+  <button id="load">1. Download &amp; load</button>
+  <button id="run" disabled>2. Run tests</button>
+  <button id="offline" disabled>3. Offline check</button>
+  <button id="persist">Ask browser to keep storage</button>
+  <button id="clear">Delete cached models</button>
+  <button id="copy">Copy report</button>
+</div>
+<progress id="bar" value="0" max="1" hidden></progress>
+<p id="status" class="soft">Idle.</p>
+
+<h2>Results</h2>
+<div id="summary"></div>
+<table id="results"><thead><tr><th>Case</th><th>Mood</th><th>Input</th><th>Output</th><th>Result</th><th>ms</th></tr></thead><tbody></tbody></table>
+
+<h2>Log</h2>
+<pre id="log"></pre>
+<script type="module" src="lab.js"></script>
+</body>
+</html>

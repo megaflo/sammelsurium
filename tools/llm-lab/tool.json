@@ -1,0 +1,4 @@
+{
+  "title": "LLM lab",
+  "description": "Downloads small language models into the browser and tests how well they rewrite Detektei dialog. Meant for reporting results back, not for playing."
+}
