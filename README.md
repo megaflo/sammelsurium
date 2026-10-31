@@ -22,6 +22,8 @@ python3 -m http.server -d _site
 node --test tests/*.test.mjs
 ```
 
+Detektei has a metrics script that generates many cases and checks them for giveaways: `node scripts/detektei-metrics.mjs 1000`.
+
 ## One-time setup
 
 In the repository settings under Pages, set the source to **GitHub Actions**.

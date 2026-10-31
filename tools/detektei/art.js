@@ -381,6 +381,18 @@ export function roomArt(room, opts = {}) {
   let s = backdrop(t);
   const order = room.furniture.slice().sort((a, b) => (a.kind === "rug" || a.kind === "body" ? -1 : 0) - (b.kind === "rug" || b.kind === "body" ? -1 : 0) || (a.y + a.h) - (b.y + b.h));
   for (const f of order) s += g(f.x, f.y, F[f.kind](f.w, f.h, t, seq(f.id), f));
+  // Locks: a box standing on its spot, or a brass padlock on the furniture part it closes.
+  for (const lk of opts.locks || []) {
+    const cx = lk.x + lk.w / 2, by = lk.y + lk.h;
+    if (lk.box) {
+      const w = Math.min(26, Math.max(14, lk.w * 0.5)), h = w * 0.62, x = cx - w / 2, y = by - h - 1;
+      const col = { strongbox: "#5d646c", tin: "#8a3a2a", attache: "#6a3f22" }[lk.box];
+      s += `<g class="lockbox" pointer-events="none">${r(n(x), n(y), n(w), n(h), col, `rx="1.5" stroke="#1d1a17" stroke-width=".8"`)}${c(n(cx), n(y + h * 0.55), n(h * 0.22), "#d8b45a")}</g>`;
+    } else {
+      const cy = lk.y + lk.h / 2;
+      s += `<g class="padlock" pointer-events="none">${p(`M${n(cx - 2.6)} ${n(cy - 1)}v-2.2a2.6 2.6 0 0 1 5.2 0v2.2`, "none", `stroke="#c9cdd2" stroke-width="1.2"`)}${r(n(cx - 3.8), n(cy - 1), 7.6, 6, "#d8b45a", `rx="1"`)}${c(n(cx), n(cy + 1.8), 0.9, "#2a2320")}</g>`;
+    }
+  }
   for (const h of opts.revealed || []) {
     s += `<g class="opened">${r(n(h.x), n(h.y), n(h.w), n(h.h), "#0d0907", `rx="2" stroke="#e8c15a" stroke-width="1.5" stroke-dasharray="3 2"`)}${p(`M${n(h.x + h.w / 2)} ${n(h.y + h.h / 2 - 5)}l1.6 3.4 3.4 1.6-3.4 1.6-1.6 3.4-1.6-3.4-3.4-1.6 3.4-1.6z`, "#f2d27a")}</g>`;
   }
@@ -532,6 +544,9 @@ const ICONS = {
   eye: p("M4 32Q32 6 60 32Q32 58 4 32z", paper) + c(32, 32, 11, "#4a6a8a") + c(32, 32, 5, ink) + c(28, 28, 2.5, "#fff"),
   notebook: r(12, 6, 40, 52, "#6b2f2a", `rx="3"`) + r(18, 6, 34, 52, "#7a3a32", `rx="2"`) + [14, 22, 30, 38, 46].map((y) => r(10, y, 6, 3, steel, `rx="1"`)).join("") + r(24, 14, 22, 10, paper, `rx="1"`),
   code: r(6, 18, 52, 28, paper, `rx="5"`) + `<text x="32" y="38" font-size="16" text-anchor="middle" fill="${ink}" font-weight="700" font-family="ui-monospace,monospace">A7K</text>`,
+  strongbox: r(8, 18, 48, 34, "#5d646c", `rx="3" stroke="#3a3f45" stroke-width="2"`) + r(8, 18, 48, 8, "#6f777f", `rx="3"`) + c(32, 38, 8, gold, `stroke="#8a6a2a" stroke-width="1.5"`) + l(32, 33, 32, 38, ink, 2) + [24, 40].map((x) => c(x, 46, 1.6, "#3a3f45")).join(""),
+  tin: r(12, 22, 40, 30, "#8a3a2a", `rx="4"`) + r(10, 18, 44, 8, "#a8483a", `rx="3"`) + p("M27 22v-8a5 5 0 0 1 10 0v8", "none", `stroke="${steel}" stroke-width="3"`) + r(25, 22, 14, 11, gold, `rx="2"`) + c(32, 27, 1.8, ink),
+  attache: r(6, 22, 52, 32, "#6a3f22", `rx="4"`) + p("M24 22v-6h16v6", "none", `stroke="#4a2a16" stroke-width="4"`) + l(6, 34, 58, 34, "#4a2a16", 1.5) + [18, 46].map((x) => r(x - 4, 30, 8, 8, gold, `rx="1"`)).join("") + r(28, 30, 8, 8, "#c9cdd2", `rx="1"`),
   gavel: r(10, 14, 28, 14, "#7a4a2a", `rx="3" transform="rotate(-35 24 21)"`) + l(26, 28, 50, 54, "#5a3418", 5, `stroke-linecap="round"`) + r(30, 50, 26, 6, "#5a3418", `rx="2"`),
   door: r(16, 6, 32, 52, "#5a3a22", `rx="2"`) + r(20, 10, 24, 20, "#4a2e1a") + r(20, 34, 24, 20, "#4a2e1a") + c(42, 34, 2.4, gold),
   person: c(32, 22, 11, "#c9b9a0") + p("M12 58q0-20 20-20t20 20z", "#c9b9a0"),
