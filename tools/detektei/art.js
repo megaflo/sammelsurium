@@ -284,24 +284,44 @@ const F = {
     return s;
   },
   body(w, h, t, rnd, f) {
-    // A figure lying on the floor, head to the left, one arm thrown out. f.look sets hair, clothes and build.
+    // A figure lying on its back seen from above, head to the left, one arm thrown out. f.look sets hair, clothes and build.
     const L = (f && f.look) || { hair: "short", hairColor: "#6a6a6a", suit: "#2b2a33", shirt: "#f4efe2" };
-    const skin = "#e4c2a8", dress = !!L.dress;
-    let s = e(w * 0.55, h * 0.78, w * 0.48, h * 0.16, "#00000040");
-    const hr = h * 0.15, hx = w * 0.18 - hr * 0.6, hy = h * 0.52;
-    // Long hair spreads on the floor behind the head.
-    if (L.hair === "long") s += p(`M${hx + hr * 0.3} ${hy - hr * 1.1}Q${hx - hr * 2.4} ${hy - hr * 0.8} ${hx - hr * 2.1} ${hy + hr * 0.9}Q${hx - hr * 0.6} ${hy + hr * 1.3} ${hx + hr * 0.4} ${hy + hr * 0.9}z`, L.hairColor);
-    // Head first, so the shoulders overlap it and it stays attached to the body.
-    s += c(hx, hy, hr, skin);
-    s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.98} ${h * (dress ? 0.3 : 0.44)}L${w * 0.98} ${h * (dress ? 0.78 : 0.62)}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
-    s += p(`M${w * 0.6} ${h * 0.52}L${w * 0.98} ${h * 0.5}`, "none", `stroke="#00000055" stroke-width="2"`);
-    s += p(`M${w * 0.3} ${h * 0.36}Q${w * 0.32} ${h * 0.12} ${w * 0.42} ${h * 0.04}`, "none", `stroke="${L.suit}" stroke-width="${h * 0.12}" stroke-linecap="round"`);
-    s += c(w * 0.43, h * 0.04, h * 0.07, skin);
-    if (L.hair === "bald") s += p(`M${hx - hr * 0.95} ${hy - hr * 0.1}Q${hx - hr * 0.6} ${hy - hr * 1.3} ${hx + hr * 0.4} ${hy - hr * 0.95}Q${hx + hr * 0.1} ${hy - hr * 0.5} ${hx - hr * 0.2} ${hy - hr * 0.1}z`, L.hairColor);
-    else if (L.hair === "short") s += p(`M${hx - hr} ${hy}Q${hx - hr} ${hy - hr * 1.2} ${hx + hr * 0.3} ${hy - hr}Q${hx - hr * 0.1} ${hy - hr * 0.3} ${hx - hr * 0.1} ${hy}z`, L.hairColor);
-    else s += p(`M${hx - hr} ${hy + hr * 0.2}Q${hx - hr} ${hy - hr * 1.2} ${hx + hr * 0.4} ${hy - hr}Q${hx - hr * 0.2} ${hy - hr * 0.3} ${hx - hr * 0.2} ${hy + hr * 0.2}z`, L.hairColor);
-    s += dress ? p(`M${w * 0.2} ${h * 0.46}L${w * 0.27} ${h * 0.46}L${w * 0.25} ${h * 0.56}L${w * 0.2} ${h * 0.55}z`, L.shirt) + c(w * 0.24, h * 0.58, 2.4, "#e8e0d0") : r(w * 0.2, h * 0.44, w * 0.05, h * 0.12, L.shirt);
-    s += c(w * 0.44, h * 0.14, 2.2, "#c9a24a");
+    const skin = "#e4c2a8", shoe = "#1c1714", dress = !!L.dress, cy = h * 0.55;
+    const X = (v) => n(w * v), Y = (v) => n(h * v);
+    const limb = (pts, col, sw, cap = "round") => p(`M${pts.map(([x, y]) => `${X(x)} ${Y(y)}`).join("L")}`, "none", `stroke="${col}" stroke-width="${n(sw)}" stroke-linecap="${cap}" stroke-linejoin="round"`);
+    let s = e(w * 0.52, h * 0.8, w * 0.48, h * 0.14, "#00000040");
+    const hr = Math.min(h * 0.17, w * 0.06), hx = w * 0.19 - hr * 1.35;
+    // Long hair fans out on the floor behind the head.
+    if (L.hair === "long") s += p(`M${n(hx)} ${n(cy - hr * 1.15)}Q${n(hx - hr * 2.6)} ${n(cy - hr * 1.4)} ${n(hx - hr * 2.2)} ${n(cy)}Q${n(hx - hr * 2.6)} ${n(cy + hr * 1.4)} ${n(hx)} ${n(cy + hr * 1.15)}z`, L.hairColor);
+    // Legs: trousers with shoes, or stockinged shins under a skirt.
+    if (dress) {
+      s += limb([[0.78, 0.47], [0.93, 0.42]], "#3a2f2c", h * 0.09) + limb([[0.78, 0.63], [0.93, 0.7]], "#3a2f2c", h * 0.09);
+      s += e(w * 0.95, h * 0.41, h * 0.05, h * 0.07, shoe) + e(w * 0.95, h * 0.71, h * 0.05, h * 0.07, shoe);
+      s += p(`M${X(0.5)} ${Y(0.36)}L${X(0.82)} ${Y(0.24)}Q${X(0.85)} ${Y(0.55)} ${X(0.82)} ${Y(0.86)}L${X(0.5)} ${Y(0.74)}z`, L.suit);
+      s += p(`M${X(0.62)} ${Y(0.34)}Q${X(0.7)} ${Y(0.5)} ${X(0.8)} ${Y(0.42)}M${X(0.62)} ${Y(0.68)}Q${X(0.7)} ${Y(0.6)} ${X(0.8)} ${Y(0.7)}`, "none", `stroke="#00000033" stroke-width="1.2"`);
+    } else {
+      s += limb([[0.5, 0.45], [0.92, 0.4]], L.suit, h * 0.17, "butt") + limb([[0.5, 0.65], [0.92, 0.71]], L.suit, h * 0.17, "butt");
+      s += e(w * 0.94, h * 0.39, h * 0.06, h * 0.09, shoe) + e(w * 0.94, h * 0.72, h * 0.06, h * 0.09, shoe);
+    }
+    // Arm along the side, under the torso's edge.
+    s += limb([[0.22, 0.76], [0.38, 0.85], [0.5, 0.84]], L.suit, h * 0.12) + c(w * 0.53, h * 0.84, h * 0.06, skin);
+    // Neck, then the torso over it.
+    s += r(n(hx + hr * 0.6), n(cy - hr * 0.4), n(w * 0.2 - hx - hr * 0.4), n(hr * 0.8), skin);
+    s += p(`M${X(0.19)} ${Y(0.38)}Q${X(0.19)} ${Y(0.27)} ${X(0.25)} ${Y(0.27)}L${X(0.5)} ${Y(0.34)}Q${X(0.55)} ${Y(0.55)} ${X(0.5)} ${Y(0.76)}L${X(0.25)} ${Y(0.83)}Q${X(0.19)} ${Y(0.83)} ${X(0.19)} ${Y(0.72)}z`, L.suit);
+    // Collar: shirt and lapels for the men, a lace neckline and brooch for the women.
+    if (dress) s += p(`M${X(0.19)} ${Y(0.44)}Q${X(0.25)} ${Y(0.55)} ${X(0.19)} ${Y(0.66)}z`, L.shirt) + c(w * 0.27, cy, h * 0.045, "#e8e0d0");
+    else {
+      s += p(`M${X(0.19)} ${Y(0.42)}L${X(0.3)} ${n(cy)}L${X(0.19)} ${Y(0.68)}z`, L.shirt) + l(X(0.2), n(cy), X(0.28), n(cy), "#5a1f24", h * 0.05);
+      s += p(`M${X(0.19)} ${Y(0.4)}L${X(0.31)} ${n(cy)}M${X(0.19)} ${Y(0.7)}L${X(0.31)} ${n(cy)}`, "none", `stroke="#00000055" stroke-width="1.2"`);
+    }
+    // The other arm thrown out above the head, the watch on its wrist.
+    s += limb([[0.27, 0.28], [0.3, 0.12], [0.37, 0.1]], L.suit, h * 0.12) + c(w * 0.4, h * 0.1, h * 0.06, skin) + r(n(w * 0.365), n(h * 0.04), 2.4, n(h * 0.12), "#c9a24a", `rx="1"`);
+    // Head: hair at the crown, face turned up.
+    if (L.hair !== "long" && L.hair !== "bald") s += c(hx - hr * 0.28, cy, hr, L.hairColor);
+    if (L.hair === "long") s += c(hx - hr * 0.3, cy, hr * 1.02, L.hairColor);
+    s += c(hx, cy, hr * (L.hair === "bald" ? 1 : 0.9), skin);
+    if (L.hair === "bald") s += p(`M${n(hx - hr * 0.3)} ${n(cy - hr * 0.95)}A${n(hr)} ${n(hr)} 0 0 0 ${n(hx - hr * 0.3)} ${n(cy + hr * 0.95)}`, "none", `stroke="${L.hairColor}" stroke-width="${n(hr * 0.28)}" stroke-linecap="round"`);
+    s += c(hx + hr * 0.25, cy - hr * 0.32, hr * 0.1, "#5a4038") + c(hx + hr * 0.25, cy + hr * 0.32, hr * 0.1, "#5a4038");
     return s;
   },
 };
