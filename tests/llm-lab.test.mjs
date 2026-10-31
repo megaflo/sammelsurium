@@ -16,6 +16,7 @@ test("test cases come from real dialog and carry their facts", () => {
     const { cases, vocab } = buildCases(k);
     assert.ok(cases.filter((c) => c.kind === "rewrite").length >= 6);
     assert.equal(cases.filter((c) => c.kind === "atmosphere").length, 3);
+    assert.equal(cases.filter((c) => c.kind === "flourish").length, 6);
     for (const c of cases.filter((c) => c.kind === "rewrite")) {
       for (const t of c.facts.times) assert.ok(c.text.includes(t));
       for (const room of c.facts.rooms) assert.ok(c.text.toLowerCase().includes(room));
@@ -31,7 +32,7 @@ const rw = { kind: "rewrite", text: "At 10:32 pm? I was in the study, alone.", f
 test("rewrites must keep times and rooms, and may not invent times", () => {
   assert.ok(grade(rw, "Ten thirty-two? 10:32, in the study, by myself.", vocab).pass);
   assert.deepEqual(grade(rw, "I was in the study.", vocab).problems, ["lost time 10:32"]);
-  assert.deepEqual(grade(rw, "At 10:32 I was in the library.", vocab).problems, ['lost room "study"']);
+  assert.ok(grade(rw, "At 10:32 I was in the library.", vocab).problems.includes('lost room "study"'));
   assert.match(grade(rw, "At 10:32 in the study, and again at 11:15.", vocab).problems[0], /invented time 11:15/);
   assert.match(grade(rw, "Here is the rewritten line: 10:32 in the study", vocab).problems[0], /meta/);
   assert.equal(grade(rw, "", vocab).pass, false);
@@ -60,4 +61,20 @@ test("output cleaning strips think blocks and quotes", () => {
 test("vocabOf lists room names lowercase", () => {
   const k = makeCase("4-ASZJNY");
   assert.ok(vocabOf(k).rooms.every((r) => r === r.toLowerCase()));
+});
+
+test("multi-line output, prompt echoes and drifted rewrites fail", () => {
+  assert.match(grade(rw, "10:32, in the study.\nMood: calm", vocab).problems.join(), /more than one line/);
+  assert.match(grade({ kind: "filler" }, "Mood: afraid again, and it was no use.", vocab).problems.join(), /label/);
+  assert.match(grade({ kind: "filler" }, "Felix Morrow: I was just out walking.", vocab).problems.join(), /label/);
+  const noFacts = { kind: "rewrite", text: "Lord Thorne and I served together in India. Forty years of friendship.", facts: { times: [], rooms: [], names: [] } };
+  assert.match(grade(noFacts, "Huh. I was wrong then, all the time.", vocab).problems.join(), /drifted/);
+});
+
+test("flourishes may not carry facts", () => {
+  const c = { kind: "flourish" };
+  assert.ok(grade(c, "Good heavens, must we?", vocab).pass);
+  assert.match(grade(c, "Ah, the study again.", vocab).problems.join(), /room/);
+  assert.match(grade(c, "Ask Thorne, not me.", vocab).problems.join(), /person/);
+  assert.match(grade(c, "At 9 o'clock, ha.", vocab).problems.join(), /digits/);
 });

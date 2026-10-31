@@ -32,6 +32,8 @@ export function grade(c, raw, vocab) {
   const problems = [], warnings = [];
   if (!out) return { out, pass: false, problems: ["empty output"], warnings, kept: 0 };
   if (META.test(out)) problems.push("meta text (\"here is...\", \"rewritten\", ...)");
+  if (/\n/.test(out)) problems.push("more than one line");
+  if (/(^|\n|\s)(mood|character|line|rewriter|the detective|detective)\s*:/i.test(out) || /^[A-Z][\w. ]{1,30}:\s/.test(out)) problems.push("label or prompt echo (\"Mood:\", \"Name:\", ...)");
   let kept = null;
   if (c.kind === "rewrite") {
     const lower = out.toLowerCase();
@@ -44,19 +46,22 @@ export function grade(c, raw, vocab) {
     const src = [...new Set(words(c.text).filter((w) => w.length >= 5))];
     const have = new Set(words(out));
     kept = src.length ? src.filter((w) => have.has(w)).length / src.length : 1;
-    if (kept < 0.4) warnings.push(`kept only ${Math.round(kept * 100)}% of the longer words`);
+    if (kept < 0.25) problems.push(`drifted: kept only ${Math.round(kept * 100)}% of the longer words`);
+    else if (kept < 0.4) warnings.push(`kept only ${Math.round(kept * 100)}% of the longer words`);
   } else {
     const n = wordCount(out);
-    const max = c.kind === "filler" ? 40 : 40;
-    if (n < 3) problems.push("too short");
+    const max = c.kind === "flourish" ? 15 : 40;
+    if (n < (c.kind === "flourish" ? 2 : 3)) problems.push("too short");
     if (n > max) problems.push(`too long (${n} words)`);
     if (/\d/.test(out)) problems.push("contains digits");
-    if (c.kind === "atmosphere") {
+    if (c.kind === "atmosphere" || c.kind === "flourish") {
       if (sentences(out) > 2) problems.push("more than two sentences");
       const m = out.match(BANNED_OBJECTS);
       if (m) problems.push(`names an object ("${m[0]}")`);
       const who = vocab.surnames.find((s) => new RegExp(`\\b${escapeRe(s)}\\b`, "i").test(out));
       if (who) problems.push(`names a person (${who})`);
+      const room = vocab.rooms.find((r) => out.toLowerCase().includes(r));
+      if (room) problems.push(`names a room (${room})`);
     }
   }
   return { out, pass: problems.length === 0, problems, warnings, kept };
@@ -70,6 +75,8 @@ export function buildMessages(c, modelId = "") {
     user = `Character: ${c.who}\nMood: ${c.mood}\n\nRewrite this line in the character's voice and mood. Keep the meaning. Keep every name, time and room exactly as written. Do not add new facts. Keep it about as long as the original.\n\nLine: ${c.text}`;
   } else if (c.kind === "filler") {
     user = `Character: ${c.who}\nMood: ${c.mood}\n\nThe detective asks something that has nothing to do with the case. Write the character's reply in one or two short sentences, under 20 words.`;
+  } else if (c.kind === "flourish") {
+    user = `Character: ${c.who}\nMood: ${c.mood}\n\nThe detective asks: "${c.question}"\nWrite a short interjection, under 12 words, that this character says before answering. Do not answer the question. Do not mention any times, places, people or objects.`;
   } else {
     user = `Write one sentence, under 25 words, of atmosphere for the ${c.room} of a manor house on a stormy night. Describe only light, sound, smell or weather. Do not mention people or objects.`;
   }
@@ -107,6 +114,10 @@ export function buildCases(k, { maxRewrite = 12 } = {}) {
   });
   k.suspects.forEach((s, i) => {
     for (const mood of MOODS.slice(0, 2 + (i % 3))) cases.push({ kind: "filler", id: `${s.id}/filler`, who: who(s), mood });
+  });
+  k.suspects.forEach((s, i) => {
+    const q = k.dialog[s.id].questions.find((x) => x.id === "where");
+    for (const mood of [MOODS[(i + 1) % 4], MOODS[(i + 2) % 4]]) cases.push({ kind: "flourish", id: `${s.id}/flourish`, who: who(s), mood, question: q.label });
   });
   for (const r of k.rooms) cases.push({ kind: "atmosphere", id: `${r.id}/atmosphere`, room: r.name.toLowerCase() });
   return { cases, vocab };

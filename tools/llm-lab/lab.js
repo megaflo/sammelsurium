@@ -3,14 +3,15 @@ import { buildCases, buildMessages, grade } from "./check.js";
 
 // Repos are from memory; a wrong name shows up as a load error in the report.
 const MODELS = [
-  ["onnx-community/SmolLM2-135M-Instruct", "SmolLM2 135M"],
-  ["onnx-community/SmolLM2-360M-Instruct", "SmolLM2 360M"],
+  ["HuggingFaceTB/SmolLM2-135M-Instruct", "SmolLM2 135M (repo confirmed)"],
+  ["HuggingFaceTB/SmolLM2-360M-Instruct", "SmolLM2 360M (unconfirmed)"],
   ["onnx-community/Qwen2.5-0.5B-Instruct", "Qwen2.5 0.5B"],
   ["onnx-community/Qwen3-0.6B-ONNX", "Qwen3 0.6B"],
   ["onnx-community/Llama-3.2-1B-Instruct", "Llama 3.2 1B"],
   ["onnx-community/gemma-3-1b-it-ONNX", "Gemma 3 1B"],
   ["onnx-community/Qwen2.5-1.5B-Instruct", "Qwen2.5 1.5B"],
 ];
+const MAX_NEW = 96;
 const CACHE_KEY = "transformers-cache";
 const DEFAULT_CODE = "4-ASZJNY";
 const $ = (id) => document.getElementById(id);
@@ -20,7 +21,7 @@ $("model").innerHTML = MODELS.map(([id, label]) => `<option value="${id}">${labe
 $("code").value = DEFAULT_CODE;
 
 const runs = [];
-let lib = null, libUrl = "", current = null, busy = false;
+let lib = null, libUrl = "", current = null, busy = false, activeRun = null;
 
 const log = (m) => { $("log").textContent += `${new Date().toISOString().slice(11, 19)} ${m}\n`; $("log").scrollTop = 1e9; };
 const status = (m) => { $("status").textContent = m; };
@@ -33,7 +34,11 @@ async function storageInfo() {
 
 async function environment() {
   let gpu = null;
-  try { const a = await navigator.gpu?.requestAdapter(); gpu = a ? { ...(a.info || {}) } : "no adapter"; } catch (e) { gpu = "error: " + e.message; }
+  try {
+    const a = await navigator.gpu?.requestAdapter();
+    const i = a?.info || {};
+    gpu = a ? { vendor: i.vendor, architecture: i.architecture, device: i.device, description: i.description } : "no adapter";
+  } catch (e) { gpu = "error: " + e.message; }
   return { ua: navigator.userAgent, cores: navigator.hardwareConcurrency, deviceMemoryGB: navigator.deviceMemory ?? null,
     webgpu: !!navigator.gpu, gpu, crossOriginIsolated, online: navigator.onLine, lib: libUrl };
 }
@@ -63,8 +68,10 @@ async function load({ offline }) {
   busy = true;
   for (const b of ["load", "run", "offline"]) $(b).disabled = true;
   const id = modelId(), dtype = $("dtype").value, device = $("device").value;
-  const run = { label: offline ? "offline check" : "download", model: id, dtype, device, downloadedBytes: 0, loadMs: null, error: null, cases: [], env: null, storageBefore: await storageInfo() };
+  const run = { label: offline ? "offline check" : "download", model: id, dtype, device, bytesReported: 0, loadMs: null, error: null, cases: [], env: null, storageBefore: await storageInfo() };
   runs.push(run);
+  activeRun = run;
+  run.cachedFilesBefore = (await cachedFiles()).filter((f) => !f.error).length;
   const files = new Map();
   const realFetch = globalThis.fetch;
   let envRef = null, realEnvFetch;
@@ -100,12 +107,13 @@ async function load({ offline }) {
       },
     });
     run.loadMs = Math.round(performance.now() - t0);
-    run.downloadedBytes = [...files.values()].reduce((a, f) => a + f.loaded, 0);
+    // Progress events are also emitted for files read from the cache, so this is not network traffic.
+    run.bytesReported = [...files.values()].reduce((a, f) => a + f.loaded, 0);
     run.downloadFiles = [...files].map(([f, v]) => ({ file: f, bytes: v.total }));
     current = { pipe, id, dtype, device };
     run.cachedFiles = await cachedFiles();
-    log(`loaded in ${run.loadMs} ms; fetched ${mb(run.downloadedBytes)} over the network; ${run.cachedFiles.length} files in cache`);
-    status(`Loaded ${id} in ${(run.loadMs / 1000).toFixed(1)} s. Network bytes: ${mb(run.downloadedBytes)}.`);
+    log(`loaded in ${run.loadMs} ms; progress events covered ${mb(run.bytesReported)}; files in cache before: ${run.cachedFilesBefore}, after: ${run.cachedFiles.length}`);
+    status(`Loaded ${id} in ${(run.loadMs / 1000).toFixed(1)} s. Files in cache before this load: ${run.cachedFilesBefore}.`);
   } catch (e) {
     run.error = String(e && e.message || e);
     log("ERROR: " + run.error);
@@ -118,7 +126,6 @@ async function load({ offline }) {
     $("bar").hidden = true;
     busy = false;
     $("load").disabled = false; $("offline").disabled = !current; $("run").disabled = !current;
-    $("run").dataset.run = String(runs.length - 1);
   }
 }
 
@@ -126,7 +133,7 @@ async function runTests() {
   if (busy || !current) return;
   busy = true;
   for (const b of ["load", "run", "offline"]) $(b).disabled = true;
-  const run = runs[runs.length - 1];
+  const run = activeRun;
   run.cases = [];
   $("results").tBodies[0].innerHTML = "";
   try {
@@ -140,14 +147,15 @@ async function runTests() {
       const t0 = performance.now();
       let raw = "", err = null;
       try {
-        const res = await current.pipe(buildMessages(c, current.id), { max_new_tokens: 96, do_sample: temp > 0, temperature: temp > 0 ? temp : undefined, top_p: 0.9, repetition_penalty: 1.05, return_full_text: false });
+        const res = await current.pipe(buildMessages(c, current.id), { max_new_tokens: MAX_NEW, do_sample: temp > 0, temperature: temp > 0 ? temp : undefined, top_p: 0.9, repetition_penalty: 1.05, return_full_text: false });
         const g = res[0].generated_text;
         raw = Array.isArray(g) ? g.at(-1).content : g;
       } catch (e) { err = String(e && e.message || e); }
       const ms = Math.round(performance.now() - t0);
       const r = err ? { out: "", pass: false, problems: ["error: " + err], warnings: [], kept: null } : grade(c, raw, vocab);
-      let tokens = null;
-      try { tokens = current.pipe.tokenizer.encode(r.out).length; } catch {}
+      let tokens = null, generated = null;
+      try { tokens = current.pipe.tokenizer.encode(r.out).length; generated = current.pipe.tokenizer.encode(raw).length; } catch {}
+      if (!err && generated != null && generated >= MAX_NEW - 2) { r.problems.push("did not stop (hit the token limit)"); r.pass = false; }
       const rec = { id: c.id, kind: c.kind, mood: c.mood || null, input: c.text || c.room || null, output: r.out, pass: r.pass, problems: r.problems, warnings: r.warnings, kept: r.kept == null ? null : Math.round(r.kept * 100) / 100, ms, tokens };
       run.cases.push(rec);
       addRow(rec);
