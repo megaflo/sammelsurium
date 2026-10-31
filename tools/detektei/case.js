@@ -1,8 +1,7 @@
 // Case library, generator and solver. Pure functions: the same case number gives the same case on every
 // device running the same VERSION. Both devices build the whole case; each role only shows its own side.
 
-export const VERSION = 1;
-export const BUDGET = 36; // actions per detective: 11:30 pm until 5:30 am, 10 minutes each
+export const VERSION = 2;
 const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 // ---------- hashing and randomness ----------
@@ -178,13 +177,36 @@ export const WEAPONS = [
   { id: "wire", name: "coil of piano wire", cause: "cord", trace: "two loops wound around pencil stubs as handles" },
 ];
 
+// Red herrings: plausible finds that lead nowhere. {X} is a random suspect, who explains it when confronted.
 const NOISE = [
   { title: "Crossword", icon: "paper", text: "A half-finished crossword. Someone has pencilled MOTIVE into 7 across, then rubbed it out." },
   { title: "Matchbook", icon: "matches", text: "A matchbook from the Blue Parrot Club, London. Three matches used." },
-  { title: "Train ticket", icon: "ticket", text: "An unused ticket for the 6:15 train to London, dated tomorrow." },
+  { title: "Train ticket", icon: "ticket", text: "An unused ticket for the 6:15 train to London, dated tomorrow, in the name of {X}.", react: "I meant to leave in the morning. After tonight, I'd say that's understandable." },
   { title: "Pawn ticket", icon: "ticket", text: "A pawn ticket for a silver pocket watch, from a shop in Brighton." },
   { title: "Unfinished poem", icon: "paper", text: "An unsigned love poem. It breaks off mid-rhyme." },
   { title: "Torn photograph", icon: "photo", text: "Half of a photograph: a seaside pier, and a hand holding an ice cream." },
+  { title: "Folded note", icon: "letter", text: "A folded note in {X}'s handwriting: \"After dinner. The usual place. Don't be late.\"", react: "That note is about a game of cards. We play every Saturday. Ask anyone." },
+  { title: "Diary page", icon: "paper", text: "A page torn from {V}'s diary: \"Must speak to {X} about the money. This cannot go on.\"", react: "{V} lent me money years ago, and I paid every penny back. {V} liked to keep reminding me." },
+  { title: "Stained handkerchief", icon: "handkerchief", text: "A handkerchief with a few spots of dried blood, embroidered with the letter {I}.", react: "A nosebleed this morning. The damp in this house gives me nosebleeds." },
+  { title: "Telegram", icon: "letter", text: "A telegram to {X}: \"ARRIVING TUESDAY STOP SAY NOTHING TO ANYONE STOP\"", react: "My brother is coming to visit, and the family can't stand him. That's all it is." },
+  { title: "Pill box", icon: "pills", text: "An empty pill box from a London chemist, made out to {X}. \"Two at bedtime.\"", react: "Sleeping pills. I haven't slept properly in years. Is that a crime now?" },
+  { title: "Jeweller's bill", icon: "ledger", text: "An unpaid bill from a Bond Street jeweller, made out to {X}: one diamond brooch.", react: "A gift for someone dear to me. I'll pay it when I can." },
+  { title: "Slashed sketch", icon: "paper", text: "A charcoal sketch of {V}, slashed through twice. It is signed with the initial {I}.", react: "I spoiled the drawing and lost my temper with it. With the drawing, mind you." },
+  { title: "Cigarette end", icon: "cigarette", text: "A cigarette end with a gold band and a trace of lipstick." },
+  { title: "Broken glass", icon: "glass", text: "Shards of a wine glass, swept into a neat little pile and forgotten." },
+  { title: "Brass key", icon: "key", text: "A small brass key on a ribbon, labelled \"Gatehouse\"." },
+  { title: "Single glove", icon: "glove", text: "A single leather driving glove. The other one is nowhere to be seen." },
+  { title: "Revolver cartridge", icon: "cartridge", text: "A single revolver cartridge, unfired. There's no revolver anywhere in sight." },
+  { title: "Railway timetable", icon: "paper", text: "A railway timetable with the 11:15 night train circled in red." },
+  { title: "Racing slip", icon: "ticket", text: "A betting slip: ten pounds on Lucky Lad, the 3:30 at Epsom. Lucky Lad came last." },
+  { title: "Burnt scrap", icon: "clipping", text: "A scrap of burnt paper. Only a few words are left: \"...will never forgive...\"" },
+  { title: "Love letter", icon: "letter", text: "A love letter to {X}, unsigned. The handwriting is shaky.", react: "That letter is private, and it has nothing to do with {V}. Put it away." },
+  { title: "Teacup", icon: "cup", text: "A cold cup of tea with a lipstick mark on the rim. It hasn't been touched since this afternoon." },
+  { title: "Muddy footprint", icon: "magnifier", text: "A dried, muddy footprint. A few days old, by the look of it." },
+  { title: "Old will", icon: "will", text: "A will of {V}'s, dated nine years ago and crossed out. It leaves everything to a cats' home." },
+  { title: "Letter of complaint", icon: "letter", text: "A letter from {X} to {V}, complaining about the draughts in the guest rooms. Three pages long.", react: "The draughts in this house are criminal. That's the only crime I've ever accused anyone of." },
+  { title: "Rope", icon: "cord", text: "A coil of rope, still with its shop label. Clean and unused." },
+  { title: "Spectacle case", icon: "paper", text: "An empty spectacle case. The initial {I} is stamped on the lid.", react: "Oh, there it is. I've been looking for that case all week." },
 ];
 
 // ---------- library: furniture ----------
@@ -423,7 +445,6 @@ const fmtTime = (mins) => {
   const h = Math.floor(mins / 60) % 24, m = mins % 60;
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "am" : "pm"}`;
 };
-export const clockAt = (used) => fmtTime(23 * 60 + 30 + used * 10);
 
 function layoutRoom(room, isScene) {
   const furniture = room.furniture.map(([kind, x, y, w, h], i) => ({ kind, x, y, w, h, id: `${room.id}.${i}` }));
@@ -519,7 +540,12 @@ function build(code, attempt) {
   addClue("weapon", { title: cap(weapon.name), icon: weapon.id, tag: "Murder weapon", text: `A ${weapon.name}, hidden ${spotWeapon.hiddenDef.found}: ${weapon.trace}. Caught on it is a single ${M.lib.tone} hair.` });
   addClue("decoy", { title: cap(decoy.name), icon: decoy.id, text: `A ${decoy.name}. Clean and dusty; nobody has handled it in days.` });
   addClue("token", { title: "Something dropped", icon: M.lib.token.icon, text: `${cap(M.lib.token.name)}, lying ${spotToken.hiddenDef.found}. It hasn't been there long: there's no dust on it.` });
-  const noise = R.shuffle(NOISE).slice(0, 3);
+  // About two thirds of the free places hold a red herring, so most codes the field agent finds lead nowhere.
+  const freeLeaves = rooms.flatMap((r) => r.furniture.filter((f) => f.kind !== "body").flatMap(leaves)).length - 4;
+  const noise = R.shuffle(NOISE).slice(0, Math.min(NOISE.length, Math.round(freeLeaves * 0.66))).map((n) => {
+    const X = n.text.includes("{X}") || n.text.includes("{I}") ? R.pick(suspects) : null;
+    return { ...n, X, text: fill(n.text, { V, X: X ? nm(X) : "", I: X ? X.lib.surname[0] : "" }) };
+  });
   noise.forEach((n, i) => addClue(`noise${i}`, { title: n.title, icon: n.icon, text: n.text }));
 
   // ---------- hints (interrogator learns them) ----------
@@ -612,6 +638,7 @@ function build(code, attempt) {
     if (s === H) {
       confront.motiveH = { text: fill(motiveOf.H.admit, { V }) + ` But I was ${honest.act} all evening.`, mood: "uneasy" };
     }
+    noise.forEach((nz, i) => { if (nz.X === s && nz.react) confront[`noise${i}`] = { text: fill(nz.react, { V }), mood: "uneasy" }; });
     confront.body = { text: "Dreadful. Simply dreadful. Must you show me that?", mood: "uneasy" };
     confront.decoy = { text: `A ${decoy.name}? What about it?`, mood: "calm" };
     if (s !== M) confront.weapon = { text: `Good heavens. Is that what did it? I've never touched it.`, mood: "afraid" };
@@ -663,7 +690,7 @@ function codeFor(caseCode, id, salt) {
 function briefing(victim, manor, S, suspects, rooms) {
   return `A storm rages over ${manor}. At eleven, ${victim.name} was found dead in the ${rn(S)}. The doors were locked and the telephone lines are down; nobody has left. ` +
     `Three people are still in the house: ${suspects.map((s) => `${s.name} (${s.title.toLowerCase()})`).join(", ")}. ` +
-    `The police can't get through before dawn. Until then, the case is yours.`;
+    `The police can't get through before morning. Until then, the case is yours.`;
 }
 
 // ---------- solver ----------

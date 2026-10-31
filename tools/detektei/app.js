@@ -1,4 +1,4 @@
-import { makeCase, newCaseCode, parseCaseCode, lookup, checkAccusation, clockAt, leaves, BUDGET, WEAPONS, MOTIVES } from "./case.js";
+import { makeCase, newCaseCode, parseCaseCode, lookup, checkAccusation, leaves, WEAPONS, MOTIVES } from "./case.js";
 import { roomArt, ROOM_DEFS, portrait, icon, logo } from "./art.js";
 
 const app = document.getElementById("app");
@@ -26,8 +26,8 @@ let ui = {};
 
 function blank(r) {
   return r === "F"
-    ? { used: 0, examined: {}, revealed: {}, hints: [], found: [], result: null }
-    : { used: 0, clues: [], hints: [], asked: {}, done: {}, events: {}, seen: {}, last: {}, transcript: [], result: null };
+    ? { examined: {}, revealed: {}, hints: [], found: [], result: null }
+    : { clues: [], hints: [], asked: {}, done: {}, events: {}, seen: {}, last: {}, transcript: [], result: null };
 }
 const saveKey = () => `case:${K.code}:${role}`;
 const save = () => store.set(saveKey(), st);
@@ -41,12 +41,6 @@ function open(code, r) {
   render();
 }
 
-const left = () => BUDGET - st.used;
-function spend() {
-  if (st.used >= BUDGET) { toast("It's dawn. No time left: make your accusation."); return false; }
-  st.used++;
-  return true;
-}
 
 // ---------- toast and sheets ----------
 let toastTimer;
@@ -90,7 +84,7 @@ function home() {
     ${saved.length ? `<div class="panel"><h2>Your cases</h2><ul class="saved">${saved.map((x) => `
       <li><button data-act="resume" data-code="${x.code}" data-role="${x.r}">
         <span class="mini">${icon(x.r === "I" ? "interrogator" : "fieldagent")}</span>
-        <span><strong>${x.code}</strong><br><span class="soft">${ROLE[x.r]} · ${x.s.result ? "closed" : `${BUDGET - x.s.used} actions left`}</span></span>
+        <span><strong>${x.code}</strong><br><span class="soft">${ROLE[x.r]} · ${x.s.result ? "closed" : "in progress"}</span></span>
       </button><button class="ghost" data-act="forget" data-code="${x.code}" data-role="${x.r}" aria-label="Delete case ${x.code}">×</button></li>`).join("")}</ul></div>` : ""}
     <details class="panel rules"><summary>How to play</summary>${rulesHtml()}</details>
   </section>`;
@@ -101,7 +95,8 @@ function rulesHtml() {
   <p><strong>The interrogator</strong> questions the three suspects, looks at them closely, and confronts them with clues. Some answers contain a <em>hint</em> with a three-character code.</p>
   <p><strong>The field agent</strong> searches three rooms, opening furniture and looking into drawers, pockets and the like. Interesting finds are <em>clues</em> with a code.</p>
   <p>Read codes to each other. The interrogator enters clue codes to confront suspects with them. The field agent enters hint codes, then applies a hint in the room where it fits to uncover hidden places.</p>
-  <p>Every question, search or confrontation takes ten minutes. Each of you has ${BUDGET} actions until dawn. Then, or earlier, accuse: name the murderer, the weapon and the motive. You get one try.</p>`;
+  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Work out together which clues matter.</p>
+  <p>Take as long as you like. When you're sure, accuse: name the murderer, the weapon and the motive. You get one try.</p>`;
 }
 
 function newCase() {
@@ -138,20 +133,20 @@ function briefing() {
     <p class="lead">${esc(K.briefing)}</p>
     <div class="panel"><h2>Suspects</h2><ul class="cast">${sus}</ul></div>
     <div class="panel"><h2>Rooms</h2><ul class="cast rooms">${rooms}</ul></div>
-    <div class="panel"><h2>Your job</h2>${job}<p>You have ${BUDGET} actions, from 11:30 pm until dawn at 5:30 am. Each one takes ten minutes.</p></div>
+    <div class="panel"><h2>Your job</h2>${job}<p>Expect plenty of red herrings: most clues lead nowhere. There's no time limit, but you only get one accusation.</p></div>
     <button class="primary wide" data-act="start">Start investigating</button>
   </section>`;
 }
 
 function topbar() {
-  const out = st.used >= BUDGET;
+  const count = role === "F" ? `${st.found.length} clue${st.found.length === 1 ? "" : "s"} found` : `${st.clues.length} clue${st.clues.length === 1 ? "" : "s"} received`;
   return `<header class="top">
     <button class="ghost" data-act="menu" aria-label="Menu">☰</button>
-    <div class="clock ${out ? "out" : ""}"><strong>${clockAt(st.used)}</strong><span>${out ? "dawn: time's up" : `${left()} actions left`}</span></div>
+    <div class="clock"><strong>${esc(K.manor)}</strong><span>${ROLE[role]} · ${count}</span></div>
     <button data-act="notebook" class="tool" aria-label="Notebook">${icon("notebook")}<span>Notes</span></button>
     <button data-act="code" class="tool" aria-label="Enter a code">${icon("code")}<span>Code</span></button>
     <button data-act="toAccuse" class="tool" aria-label="Accuse">${icon("gavel")}<span>Accuse</span></button>
-  </header>${out ? `<p class="dawn">The sun is up and the police are at the door. Make your accusation.</p>` : ""}`;
+  </header>`;
 }
 
 function game() { return topbar() + (role === "F" ? fieldView() : interrogatorView()); }
@@ -204,7 +199,7 @@ function fieldView() {
   const tabs = K.rooms.map((r) => `<button class="tab ${r.id === ui.room ? "on" : ""}" data-act="room" data-id="${r.id}">${esc(r.name)}${r.id === K.scene ? " ✝" : ""}</button>`).join("");
   const crumbs = [`<button class="crumb" data-act="up" data-to="">${esc(room.name)}</button>`, ...path.map((n, i) => i === path.length - 1 ? `<span class="crumb now">${esc(n.label)}</span>` : `<button class="crumb" data-act="up" data-to="${n.id}">${esc(n.label)}</button>`)].join(" › ");
   const list = kids.map((k) => `<li><button data-act="node" data-id="${k.id}" class="spot ${nodeDone(k) ? "done" : ""} ${k.hidden ? "secret" : ""}">
-      <span>${esc(k.label)}</span><span class="meta">${isLeaf(k) ? (leafDone(k) ? "examined ✓" : "examine · 10 min") : nodeDone(k) ? "searched ✓" : "look closer ›"}</span></button></li>`).join("");
+      <span>${esc(k.label)}</span><span class="meta">${isLeaf(k) ? (leafDone(k) ? "examined ✓" : "examine") : nodeDone(k) ? "searched ✓" : "look closer ›"}</span></button></li>`).join("");
   const vb = viewBoxFor(focus);
   return `<nav class="tabs" aria-label="Rooms">${tabs}</nav>
     <div class="scene">
@@ -243,7 +238,6 @@ function animateZoom() {
 function examine(room, n) {
   const content = n.hidden ? { clue: n.clue } : K.content[n.id];
   if (!st.examined[n.id]) {
-    if (!spend()) return;
     st.examined[n.id] = true;
     if (content.clue && !st.found.includes(content.clue)) st.found.push(content.clue);
     save();
@@ -267,7 +261,7 @@ function showFind(label, content) {
 function applyHintSheet() {
   const room = roomById(ui.room);
   sheet(`<h2>Use a hint in the ${esc(room.name.toLowerCase())}</h2>
-    <p class="soft">Searching for it takes ten minutes. If the hint doesn't fit this room, you'll find nothing.</p>
+    <p class="soft">If the hint doesn't fit this room, you'll find nothing.</p>
     <ul class="choices">${st.hints.map((id) => { const h = K.hints[id]; const used = st.revealed[K.hiddenSpots[h.spot].id];
       return `<li><button data-act="useHint" data-id="${id}" ${used ? "disabled" : ""}><span class="code">${h.code}</span> ${esc(h.text)}${used ? ` <em>(found)</em>` : ""}</button></li>`; }).join("")}</ul>`);
 }
@@ -275,9 +269,8 @@ function applyHintSheet() {
 function useHint(id) {
   const h = K.hints[id];
   const spot = K.hiddenSpots[h.spot];
-  if (!spend()) return;
   if (h.room !== ui.room) {
-    save(); closeSheet(); render();
+    closeSheet();
     sheet(`<div class="find">${icon("magnifier")}<div><h2>Nothing here</h2><p>You search the ${esc(roomById(ui.room).name.toLowerCase())} for it, but nothing here fits the hint.</p></div></div><button class="primary wide" data-act="close">OK</button>`);
     return;
   }
@@ -312,7 +305,7 @@ function interrogatorView() {
       <span class="face">${portrait(x.lib.look, { mood: st.last[x.id] ? st.last[x.id].mood : "calm", lost: x.role === "M", label: x.name })}</span><span>${esc(x.short)}</span></button>`).join("");
   const qs = d.questions.filter((q) => hasAll(q.requires)).map((q) => {
     const done = st.asked[`${s.id}:${q.id}`];
-    return `<li><button class="q ${done ? "done" : ""}" data-act="ask" data-id="${q.id}"><span>${esc(q.label)}</span><span class="meta">${done ? "asked ✓" : "10 min"}</span></button></li>`;
+    return `<li><button class="q ${done ? "done" : ""}" data-act="ask" data-id="${q.id}"><span>${esc(q.label)}</span><span class="meta">${done ? "asked ✓" : ""}</span></button></li>`;
   }).join("");
   const lockedQs = d.questions.filter((q) => !hasAll(q.requires)).length;
   const hintChips = last && last.gives && last.gives.length ? last.gives.map((h) => `<div class="pass small"><span>Hint code for the field agent</span><strong class="code">${K.hints[h].code}</strong></div>`).join("") : "";
@@ -348,7 +341,7 @@ function ask(qid) {
   const s = sus(ui.suspect);
   const q = K.dialog[s.id].questions.find((x) => x.id === qid);
   const key = `${s.id}:${qid}`;
-  if (!st.asked[key]) { if (!spend()) return; st.asked[key] = true; for (const ev of q.events) st.events[ev] = true; }
+  if (!st.asked[key]) { st.asked[key] = true; for (const ev of q.events) st.events[ev] = true; }
   reply(s, { q: q.label, text: q.text, mood: q.mood, gives: q.gives });
 }
 
@@ -357,7 +350,6 @@ function look() {
   const d = K.dialog[s.id];
   const fresh = d.observations.filter((o) => hasAll(o.requires) && !st.seen[`${s.id}:${o.id}`]);
   if (!fresh.length) { toast(`Nothing new catches your eye about ${s.short}. Not yet, anyway.`); return; }
-  if (!spend()) return;
   const o = fresh[0];
   st.seen[`${s.id}:${o.id}`] = true;
   reply(s, { q: "You study " + s.short + " closely.", text: o.text, mood: st.last[s.id] ? st.last[s.id].mood : "calm", gives: o.gives, highlight: o.region });
@@ -365,7 +357,7 @@ function look() {
 
 function confrontSheet() {
   const s = sus(ui.suspect);
-  sheet(`<h2>Confront ${esc(s.short)}</h2><p class="soft">Ten minutes. Pick the clue that matters.</p>
+  sheet(`<h2>Confront ${esc(s.short)}</h2><p class="soft">Pick the clue that matters.</p>
     <ul class="choices">${st.clues.map((id) => { const c = K.clues[id]; const done = st.done[`${s.id}:${id}`];
       return `<li><button data-act="confront" data-id="${id}" class="clue">${icon(c.icon)}<span><strong>${esc(c.title)}</strong> ${done ? `<em>(done)</em>` : ""}<br><span class="soft small">${esc(c.text)}</span></span></button></li>`; }).join("")}</ul>`);
 }
@@ -378,7 +370,6 @@ function confront(cid) {
   const key = `${s.id}:${cid}`;
   closeSheet();
   const full = c && hasAll(c.requires);
-  if (!st.done[key] && !spend()) return;
   if (full) st.done[key] = true;
   const q = `You show ${s.short}: ${clue.title.toLowerCase()}.`;
   if (full) reply(s, { q, text: c.text, mood: c.mood, gives: c.gives, events: c.events });
@@ -467,11 +458,9 @@ function result() {
   const sol = K.solution;
   const name = (k, v) => k === "suspect" ? sus(v).name : k === "weapon" ? WEAPONS.find((w) => w.id === v).name : MOTIVES.find((m) => m.id === v).label;
   const verdict = r.correct === 3 ? "Case closed" : r.correct === 0 ? "The killer walks free" : "The case falls apart in court";
-  const stars = r.correct === 3 ? (r.used <= 24 ? 3 : r.used <= 30 ? 2 : 1) : 0;
   return `<section class="result">
     <p class="eyebrow">Case ${K.code} · ${esc(K.manor)}</p>
     <h1>${verdict}</h1>
-    ${r.correct === 3 ? `<p class="stars" aria-label="${stars} of 3 stars">${"★".repeat(stars)}${"☆".repeat(3 - stars)}</p><p class="soft">Solved with ${r.used} of ${BUDGET} actions on this device.</p>` : ""}
     <ul class="verdict">${["suspect", "weapon", "motive"].map((k) => `<li class="${r.parts[k] ? "ok" : "no"}"><span>${r.parts[k] ? "✓" : "✗"}</span><span>${{ suspect: "Murderer", weapon: "Weapon", motive: "Motive" }[k]}: <strong>${esc(name(k, r.accused[k]))}</strong>${r.parts[k] ? "" : `<br><span class="soft">It was: ${esc(name(k, sol[k]))}</span>`}</span></li>`).join("")}</ul>
     <div class="panel"><h2>What really happened</h2>${K.story.map((p) => `<p>${esc(p)}</p>`).join("")}</div>
     <button class="primary wide" data-act="home">Back to the start</button>
@@ -521,7 +510,7 @@ function onClick(ev) {
     case "pick": ui.accuse[d.k] = d.v; render(); break;
     case "confirmAccuse": {
       const res = checkAccusation(K, ui.accuse);
-      st.result = { ...res, accused: { ...ui.accuse }, used: st.used };
+      st.result = { ...res, accused: { ...ui.accuse } };
       save();
       screen = "result";
       render();

@@ -69,6 +69,19 @@ test("cases are well formed", () => {
   }
 });
 
+test("most clues are red herrings, and named suspects can explain theirs", () => {
+  for (const c of codes(200, 23)) {
+    const k = makeCase(c);
+    const ids = Object.keys(k.clues);
+    const herrings = ids.filter((id) => id.startsWith("noise") || id === "decoy" || id === "motiveH");
+    assert.ok(herrings.length > ids.length - herrings.length, `${c}: ${herrings.length} of ${ids.length}`);
+    for (const s of k.suspects) for (const [cid, r] of Object.entries(k.dialog[s.id].confront)) {
+      if (cid.startsWith("noise")) assert.match(k.clues[cid].text, new RegExp(s.short.replace(/\./g, "\\.") + "|\\b" + s.lib.surname[0] + "\\b"), cid);
+      assert.ok(r.text.length > 0);
+    }
+  }
+});
+
 test("codes are looked up by kind, ignoring case and spaces", () => {
   const k = makeCase(codes(1, 9)[0]);
   const clue = k.clues.body, hint = k.hints.hWeapon;
