@@ -107,15 +107,11 @@ const F = {
     return p(`M${w * 0.08} 0H${w * 0.92}L${w} ${h}H0z`, "#7a2a2a") + p(`M${w * 0.14} 4H${w * 0.86}L${w * 0.93} ${h - 4}H${w * 0.07}z`, "none", `stroke="#d9b36a" stroke-width="2"`) + e(w / 2, h / 2, w * 0.18, h * 0.24, "#2d3f5a");
   },
   window(w, h, t) {
-    let s = r(0, 0, w, h * 0.1, t.wood2);
-    // A glass wall needs no window of its own: just the curtains, pelmet and sill hung against it.
-    if (t.pattern !== "glass") {
-      s += r(w * 0.18, h * 0.1, w * 0.64, h * 0.78, "#d8d2c0");
-      s += r(w * 0.22, h * 0.13, w * 0.56, h * 0.72, "#0f1d30");
-      s += c(w * 0.62, h * 0.3, 6, "#e9e4c8", `opacity=".75"`);
-      for (let i = 0; i < 9; i++) s += l(w * (0.25 + (i % 5) * 0.11), h * (0.18 + (i * 0.07) % 0.6), w * (0.23 + (i % 5) * 0.11), h * (0.27 + (i * 0.07) % 0.6), "#7d97b3", 1, `opacity=".6"`);
-      s += r(w * 0.49, h * 0.13, 2, h * 0.72, "#d8d2c0") + r(w * 0.22, h * 0.48, w * 0.56, 2, "#d8d2c0");
-    }
+    let s = r(0, 0, w, h * 0.1, t.wood2) + r(w * 0.18, h * 0.1, w * 0.64, h * 0.78, "#d8d2c0");
+    s += r(w * 0.22, h * 0.13, w * 0.56, h * 0.72, "#0f1d30");
+    s += c(w * 0.62, h * 0.3, 6, "#e9e4c8", `opacity=".75"`);
+    for (let i = 0; i < 9; i++) s += l(w * (0.25 + (i % 5) * 0.11), h * (0.18 + (i * 0.07) % 0.6), w * (0.23 + (i % 5) * 0.11), h * (0.27 + (i * 0.07) % 0.6), "#7d97b3", 1, `opacity=".6"`);
+    s += r(w * 0.49, h * 0.13, 2, h * 0.72, "#d8d2c0") + r(w * 0.22, h * 0.48, w * 0.56, 2, "#d8d2c0");
     s += r(w * 0.16, h * 0.86, w * 0.68, h * 0.07, "#cfc7b2");
     const cur = t.curtain || "#7a2333";
     s += p(`M0 ${h * 0.1}H${w * 0.24}Q${w * 0.16} ${h * 0.55} ${w * 0.22} ${h}H0z`, cur) + p(`M${w} ${h * 0.1}H${w * 0.76}Q${w * 0.84} ${h * 0.55} ${w * 0.78} ${h}H${w}z`, cur);
@@ -263,6 +259,21 @@ const F = {
     for (const [dx, dy] of fr) s += p(`M${w / 2} ${h * 0.62}Q${w * (0.5 + dx * 0.6)} ${h * (dy + 0.1)} ${w * (0.5 + dx)} ${h * (dy + 0.24)}Q${w * (0.5 + dx * 0.5)} ${h * (dy + 0.24)} ${w / 2} ${h * 0.62}z`, "#3f7a3a", `stroke="#2a5a28" stroke-width="1"`);
     s += l(w / 2, h * 0.4, w / 2, h * 0.66, "#5a4228", 3);
     s += p(`M${w * 0.16} ${h * 0.66}H${w * 0.84}L${w * 0.76} ${h}H${w * 0.24}z`, "#a8582e") + r(w * 0.13, h * 0.64, w * 0.74, h * 0.05, "#8a4422");
+    return s;
+  },
+  birdcage(w, h) {
+    // A brass cage on a pedestal stand, a canary on its perch.
+    const brass = "#c9a24a", dark = "#8a6a2a", top = h * 0.1, bot = h * 0.38;
+    let s = l(w / 2, h * 0.44, w / 2, h * 0.96, dark, 3) + p(`M${w * 0.18} ${h}L${w / 2} ${h * 0.9}L${w * 0.82} ${h}`, "none", `stroke="${dark}" stroke-width="3" stroke-linecap="round"`);
+    s += r(w * 0.42, h * 0.44, w * 0.16, h * 0.03, dark);
+    s += p(`M${w * 0.06} ${top}Q${w / 2} ${-h * 0.04} ${w * 0.94} ${top}z`, "#1a2c3d", `opacity=".35"`);
+    s += l(w * 0.22, h * 0.27, w * 0.78, h * 0.27, "#6a4a2a", 1.5) + e(w * 0.44, h * 0.235, w * 0.12, h * 0.03, "#e8c84a") + c(w * 0.56, h * 0.215, h * 0.022, "#e8c84a") + p(`M${w * 0.32} ${h * 0.24}l-${w * 0.1} ${h * 0.02}l${w * 0.04} -${h * 0.025}z`, "#d8b43a") + c(w * 0.575, h * 0.21, 0.8, "#1a1a1a") + p(`M${w * 0.6} ${h * 0.21}l${w * 0.05} ${h * 0.006}l-${w * 0.05} ${h * 0.008}z`, "#d87a2a");
+    s += r(w * 0.7, h * 0.3, w * 0.12, h * 0.03, "#b8bcc2") + r(w * 0.18, h * 0.3, w * 0.1, h * 0.03, "#d8c890");
+    for (let i = 0; i <= 8; i++) { const x = w * (0.06 + i * 0.11); s += l(x, top, x, bot, brass, 1); }
+    s += p(`M${w * 0.06} ${top}Q${w / 2} ${-h * 0.04} ${w * 0.94} ${top}`, "none", `stroke="${brass}" stroke-width="1.5"`);
+    for (let i = 1; i < 8; i++) { const x = w * (0.06 + i * 0.11); s += p(`M${w / 2} ${h * 0.02}Q${x} ${h * 0.03} ${x} ${top}`, "none", `stroke="${brass}" stroke-width=".8"`); }
+    s += l(w * 0.06, top, w * 0.94, top, brass, 1.5) + r(w * 0.02, bot, w * 0.96, h * 0.05, brass) + r(w * 0.02, bot + h * 0.035, w * 0.96, h * 0.015, dark);
+    s += c(w / 2, h * 0.012, 2.5, "none", `stroke="${brass}" stroke-width="1.2"`);
     return s;
   },
   sofa(w, h, t) {
