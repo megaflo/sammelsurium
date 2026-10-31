@@ -321,7 +321,8 @@ const F = {
     if (L.hair === "long") s += c(hx - hr * 0.3, cy, hr * 1.02, L.hairColor);
     s += c(hx, cy, hr * (L.hair === "bald" ? 1 : 0.9), skin);
     if (L.hair === "bald") s += p(`M${n(hx - hr * 0.3)} ${n(cy - hr * 0.95)}A${n(hr)} ${n(hr)} 0 0 0 ${n(hx - hr * 0.3)} ${n(cy + hr * 0.95)}`, "none", `stroke="${L.hairColor}" stroke-width="${n(hr * 0.28)}" stroke-linecap="round"`);
-    s += c(hx + hr * 0.25, cy - hr * 0.32, hr * 0.1, "#5a4038") + c(hx + hr * 0.25, cy + hr * 0.32, hr * 0.1, "#5a4038");
+    // Closed eyes: a short curved lid line each, running across the face.
+    for (const ey of [cy - hr * 0.34, cy + hr * 0.34]) s += p(`M${n(hx + hr * 0.22)} ${n(ey - hr * 0.17)}Q${n(hx + hr * 0.34)} ${n(ey)} ${n(hx + hr * 0.22)} ${n(ey + hr * 0.17)}`, "none", `stroke="#5a4038" stroke-width="${n(Math.max(0.8, hr * 0.12))}" stroke-linecap="round"`);
     return s;
   },
 };
