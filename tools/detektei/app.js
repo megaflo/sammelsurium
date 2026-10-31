@@ -26,7 +26,7 @@ let ui = {};
 
 function blank(r) {
   return r === "F"
-    ? { examined: {}, revealed: {}, hints: [], found: [], result: null }
+    ? { examined: {}, revealed: {}, unlocked: {}, hints: [], found: [], result: null }
     : { clues: [], hints: [], asked: {}, done: {}, events: {}, seen: {}, last: {}, transcript: [], result: null };
 }
 const saveKey = () => `case:${K.code}:${role}`;
@@ -35,7 +35,7 @@ const save = () => store.set(saveKey(), st);
 function open(code, r) {
   K = makeCase(code);
   role = r;
-  st = store.get(`case:${code}:${r}`) || blank(r);
+  st = { ...blank(r), ...(store.get(`case:${code}:${r}`) || {}) };
   ui = { room: K.rooms[0].id, focus: null, suspect: K.suspects[0].id, view: null };
   screen = st.result ? "result" : st.started ? "game" : "briefing";
   render();
@@ -94,8 +94,9 @@ function rulesHtml() {
   return `<p>Two players, two devices, no connection needed. Both enter the same case number and pick different roles.</p>
   <p><strong>The interrogator</strong> questions the three suspects, looks at them closely, and confronts them with clues. Some answers contain a <em>hint</em> with a three-character code.</p>
   <p><strong>The field agent</strong> searches three rooms, opening furniture and looking into drawers, pockets and the like. Interesting finds are <em>clues</em> with a code.</p>
-  <p>Read codes to each other. The interrogator enters clue codes to confront suspects with them. The field agent enters hint codes, then applies a hint in the room where it fits to uncover hidden places.</p>
-  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Work out together which clues matter.</p>
+  <p>Read codes to each other. The interrogator enters clue codes to confront suspects with them. The field agent enters hint codes, then applies a hint in the room where it fits to uncover hidden places. Witnesses rarely name a room; they describe what they saw or smelled through the door.</p>
+  <p>Some drawers are locked with a combination of day and month. Someone in the house knows which date the victim used, and the date itself is written on something in the rooms.</p>
+  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Nothing is labelled. Read the times, the hair colours and the wounds against what the suspects say, and work out together which clues matter. Not every case is what it first looks like.</p>
   <p>Take as long as you like. When you're sure, accuse: name the murderer, the weapon and the motive. You get one try.</p>`;
 }
 
@@ -133,7 +134,7 @@ function briefing() {
     <p class="lead">${esc(K.briefing)}</p>
     <div class="panel"><h2>Suspects</h2><ul class="cast">${sus}</ul></div>
     <div class="panel"><h2>Rooms</h2><ul class="cast rooms">${rooms}</ul></div>
-    <div class="panel"><h2>Your job</h2>${job}<p>Expect dead ends: many clues lead nowhere, and any of the suspects may be lying to you. There's no time limit, but you only get one accusation.</p></div>
+    <div class="panel"><h2>Your job</h2>${job}<p>Expect dead ends: many clues lead nowhere, any of the suspects may be lying to you, and the obvious story may be the one somebody wants you to believe. There's no time limit, but you only get one accusation.</p></div>
     <button class="primary wide" data-act="start">Start investigating</button>
   </section>`;
 }
@@ -199,7 +200,7 @@ function fieldView() {
   const tabs = K.rooms.map((r) => `<button class="tab ${r.id === ui.room ? "on" : ""}" data-act="room" data-id="${r.id}">${esc(r.name)}${r.id === K.scene ? " ✝" : ""}</button>`).join("");
   const crumbs = [`<button class="crumb" data-act="up" data-to="">${esc(room.name)}</button>`, ...path.map((n, i) => i === path.length - 1 ? `<span class="crumb now">${esc(n.label)}</span>` : `<button class="crumb" data-act="up" data-to="${n.id}">${esc(n.label)}</button>`)].join(" › ");
   const list = kids.map((k) => `<li><button data-act="node" data-id="${k.id}" class="spot ${nodeDone(k) ? "done" : ""} ${k.hidden ? "secret" : ""}">
-      <span>${esc(k.label)}</span><span class="meta">${isLeaf(k) ? (leafDone(k) ? "examined ✓" : "examine") : nodeDone(k) ? "searched ✓" : "look closer ›"}</span></button></li>`).join("");
+      <span>${esc(k.label)}</span><span class="meta">${isLeaf(k) ? (leafDone(k) ? "examined ✓" : isLocked(k) ? "locked" : "examine") : nodeDone(k) ? "searched ✓" : "look closer ›"}</span></button></li>`).join("");
   const vb = viewBoxFor(focus);
   return `<nav class="tabs" aria-label="Rooms">${tabs}</nav>
     <div class="scene">
@@ -213,7 +214,7 @@ function fieldView() {
     <ul class="spots">${list}</ul>
     <div class="row actions">
       ${focus ? `<button data-act="up" data-to="${path.length > 1 ? path[0].id : ""}">← Step back</button>` : ""}
-      <button class="grow hintbtn" data-act="applyHint" ${st.hints.length ? "" : "disabled"}>${icon("hint")} Use a hint in the ${esc(room.name.toLowerCase())}</button>
+      <button class="grow hintbtn" data-act="applyHint" ${st.hints.some((id) => K.hints[id].spot) ? "" : "disabled"}>${icon("hint")} Use a hint in the ${esc(room.name.toLowerCase())}</button>
     </div>
     ${st.hints.length ? "" : `<p class="soft small">Hints come from the interrogator. Enter their codes with the Code button.</p>`}`;
 }
@@ -235,7 +236,10 @@ function animateZoom() {
   requestAnimationFrame(step);
 }
 
+const isLocked = (n) => !n.hidden && K.content[n.id] && K.content[n.id].lock && !st.unlocked[n.id];
+
 function examine(room, n) {
+  if (isLocked(n)) return lockSheet(n);
   const content = n.hidden ? { clue: n.clue } : K.content[n.id];
   if (!st.examined[n.id]) {
     st.examined[n.id] = true;
@@ -258,11 +262,34 @@ function showFind(label, content) {
   }
 }
 
+// A locked leaf: its clue code goes to the interrogator; the dials take day and month, as many tries as you like.
+function lockSheet(n, msg = "") {
+  if (!st.found.includes("lock")) { st.found.push("lock"); save(); render(); }
+  const c = K.clues.lock;
+  sheet(`<div class="find">${icon(c.icon, c.title)}<div><p class="eyebrow">${esc(n.label)}</p><h2>${esc(c.title)}</h2><p>${esc(c.text)}</p></div></div>
+    <div class="pass"><span>Clue code for the interrogator</span><strong class="code">${c.code}</strong></div>
+    <form data-form="lock" data-id="${n.id}" class="codeform"><input name="code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="DDMM" aria-label="Combination: day and month"><button class="primary" type="submit">Turn the dials</button></form>
+    ${msg ? `<p class="err">${esc(msg)}</p>` : `<p class="soft small">Two digits for the day, two for the month: 14 June is 1406.</p>`}`);
+}
+
+function tryLock(id, input) {
+  const n = findNode(roomById(ui.room), id);
+  const combo = String(input).replace(/\D/g, "");
+  if (combo !== K.lock.combo) return lockSheet(n, `${combo.padStart(4, "-")}: the dials won't budge.`);
+  st.unlocked[id] = true;
+  st.examined[id] = true;
+  if (!st.found.includes(K.lock.clue)) st.found.push(K.lock.clue);
+  save();
+  closeSheet();
+  render();
+  showFind(n.label, { clue: K.lock.clue });
+}
+
 function applyHintSheet() {
   const room = roomById(ui.room);
   sheet(`<h2>Use a hint in the ${esc(room.name.toLowerCase())}</h2>
     <p class="soft">If the hint doesn't fit this room, you'll find nothing.</p>
-    <ul class="choices">${st.hints.map((id) => { const h = K.hints[id]; const used = st.revealed[K.hiddenSpots[h.spot].id];
+    <ul class="choices">${st.hints.filter((id) => K.hints[id].spot).map((id) => { const h = K.hints[id]; const used = st.revealed[K.hiddenSpots[h.spot].id];
       return `<li><button data-act="useHint" data-id="${id}" ${used ? "disabled" : ""}><span class="code">${h.code}</span> ${esc(h.text)}${used ? ` <em>(found)</em>` : ""}</button></li>`; }).join("")}</ul>`);
 }
 
@@ -387,7 +414,7 @@ function notebook() {
       <h3>Clues for the interrogator</h3>
       ${found.length ? `<ul class="notes">${found.map((c) => `<li>${icon(c.icon)}<div><span class="code">${c.code}</span> <strong>${esc(c.title)}</strong>${c.tag ? ` <span class="tag">${esc(c.tag)}</span>` : ""}<br>${esc(c.text)}</div></li>`).join("")}</ul>` : `<p class="soft">Nothing yet.</p>`}
       <h3>Hints from the interrogator</h3>
-      ${st.hints.length ? `<ul class="notes">${st.hints.map((id) => { const h = K.hints[id]; return `<li>${icon("hint")}<div><span class="code">${h.code}</span> ${esc(h.text)}${st.revealed[K.hiddenSpots[h.spot].id] ? " <em>(found)</em>" : ""}</div></li>`; }).join("")}</ul>` : `<p class="soft">None yet.</p>`}`);
+      ${st.hints.length ? `<ul class="notes">${st.hints.map((id) => { const h = K.hints[id]; return `<li>${icon("hint")}<div><span class="code">${h.code}</span> ${esc(h.text)}${h.spot && st.revealed[K.hiddenSpots[h.spot].id] ? " <em>(found)</em>" : ""}</div></li>`; }).join("")}</ul>` : `<p class="soft">None yet.</p>`}`);
   } else {
     const byS = K.suspects.map((s) => ({ s, lines: st.transcript.filter((t) => t.s === s.id) }));
     sheet(`<h2>Notebook</h2>
@@ -420,7 +447,7 @@ function enterCode(input) {
   render();
   if (role === "F") {
     sheet(`<div class="find">${icon("hint")}<div><p class="eyebrow">${isNew ? "New hint" : "You already have this hint"}</p><p>${esc(hit.item.text)}</p></div></div>
-      <p class="soft">Go to the room where you think it fits and choose <em>Use a hint</em>.</p><button class="primary wide" data-act="close">OK</button>`);
+      <p class="soft">${hit.item.spot ? "Go to the room where you think it fits and choose <em>Use a hint</em>." : "Find the date it means, then try it on the lock."}</p><button class="primary wide" data-act="close">OK</button>`);
   } else {
     const c = hit.item;
     sheet(`<div class="find">${icon(c.icon)}<div><p class="eyebrow">${isNew ? "New clue" : "You already have this clue"}</p><h2>${esc(c.title)}</h2>${c.tag ? `<p class="tag">${esc(c.tag)}</p>` : ""}<p>${esc(c.text)}</p></div></div>
@@ -483,6 +510,8 @@ document.addEventListener("submit", (ev) => {
     render();
   } else if (form.dataset.form === "code") {
     enterCode(value);
+  } else if (form.dataset.form === "lock") {
+    tryLock(form.dataset.id, value);
   }
 });
 

@@ -1,7 +1,7 @@
 // Case library, generator and solver. Pure functions: the same case number gives the same case on every
 // device running the same VERSION. Both devices build the whole case; each role only shows its own side.
 
-export const VERSION = 3;
+export const VERSION = 4;
 const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 // ---------- hashing and randomness ----------
@@ -37,6 +37,7 @@ function rng(seed) {
 const fill = (s, vars) => s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
 const rn = (room) => room.name.toLowerCase();
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const an = (s) => `${/^[aeiou]/i.test(s) ? "an" : "a"} ${s}`;
 
 // ---------- case numbers and item codes ----------
 const check = (body) => ALPHA[hash(`check:${body}`) % ALPHA.length];
@@ -240,6 +241,51 @@ const OPINIONS = [
 ];
 const ALONE = ["Alone, I'm afraid.", "Nobody else was there.", "On my own, the whole time.", "Nobody can vouch for me, if that's what you mean."];
 
+// ---------- library: twists ----------
+// A case has at most one twist in how the murder was done (core) and at most one in what the others did (side),
+// and often none. No twist is ever announced: each only adds clues and statements that don't fit the obvious story.
+//   staged:     the murderer set the victim's watch forward; their alibi holds for the false time only.
+//   planted:    a weapon that can't have made the wounds lies by the body; the real one is hidden.
+//   moved:      the victim died in another room and was dragged to where they lie.
+//   poison:     the poison went into a drink an hour earlier; the murderer's alibi for the death is true.
+//   frame:      the murderer left an innocent suspect's lost belonging under the body.
+//   lovers:     the two innocent suspects lie to hide an affair.
+//   confession: an innocent suspect confesses to protect the murderer, and gets the method wrong.
+const CORE_TWISTS = ["staged", "planted", "moved", "poison"];
+const SIDE_TWISTS = ["frame", "lovers", "confession"];
+const CONFESS = {
+  blunt: "struck {V} down with the first heavy thing I could lay my hands on",
+  sharp: "stabbed {V}. A blade from the kitchen. It was over in a moment",
+  poison: "put poison in {V}'s glass and watched {V} drink it",
+  cord: "strangled {V} with a cord from the curtains",
+};
+const BONDS = [
+  "{P} is {M}'s child, born out of wedlock and never acknowledged",
+  "{P} has loved {M}, without a word, for twenty years",
+  "{M} once saved {P} from ruin, and {P} never forgot it",
+  "{P} and {M} grew up as brother and sister in a children's home, and kept it from everyone",
+];
+const TRYST = ["in the summer house", "in the boathouse down by the lake", "in the old nursery at the top of the house", "in the chauffeur's flat over the garage"];
+const TRYST_TRACE = ["A crushed rose petal is caught in {n}'s collar.", "{n} smells faintly of somebody else's scent: lily of the valley.", "There is a smear of lipstick, not quite wiped away, near {n}'s ear."];
+const STAGED_TELL = [
+  "Odd, though: the winding crown is pulled out, the way you pull it to set the hands.",
+  "Odd, though: the hands still turn when you touch the crown. Someone has pulled it out to set them.",
+];
+
+// Combination locks: the victim set every lock to the date of an event. The field agent finds dated keepsakes
+// around the house; only the interrogator learns which event counts. The dials take day and month.
+const LOCK_EVENTS = [
+  { id: "wedding", phrase: "{V}'s wedding", item: "A silver-framed wedding photograph. On the back, in faded ink: \"Our wedding day, {date}.\"" },
+  { id: "firm", phrase: "the founding of {V}'s firm", item: "A brass plaque from an old office door: \"Est. {date}. Honest dealing.\" Someone has scratched out \"Honest\"." },
+  { id: "derby", phrase: "{V}'s Derby win", item: "A racing print of a bay colt crossing the line, inscribed \"Lucky Star, the Derby, {date}\"." },
+  { id: "medal", phrase: "{V}'s medal for bravery", item: "A velvet medal case. Inside the lid: \"For conspicuous gallantry, {date}.\"" },
+  { id: "house", phrase: "{V}'s purchase of this house", item: "A framed deed of sale for the house, signed and sealed on {date}." },
+  { id: "child", phrase: "the birth of {V}'s only child", item: "A silver christening cup, engraved \"Born {date}\"." },
+  { id: "mother", phrase: "{V}'s mother's death", item: "A black-edged memorial card: \"In loving memory. Fell asleep {date}.\"" },
+  { id: "voyage", phrase: "{V}'s homecoming from India", item: "A steamer ticket stub, kept in a little frame: \"Bombay to Southampton, landed {date}\"." },
+];
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
 // ---------- library: furniture ----------
 // Rects are fractions of the furniture's box: [x, y, w, h]. Tags: s = surface, c = container, f = floor, w = wall (papers only).
 // activity: what a suspect can claim to have done here; "yes" is the room's state when the claim is true, "no" when it is a lie.
@@ -442,32 +488,42 @@ export const KINDS = {
   body: {
     label: "The victim",
     parts: [
-      { id: "victim", label: "The victim", r: [0, 0, 0.7, 1], tag: "-" },
+      { id: "victim", label: "The victim", r: [0, 0, 0.7, 0.66], tag: "-" },
       { id: "pockets", label: "Pockets", r: [0.7, 0, 0.3, 1], tag: "-", flavor: ["A cigar case, a key ring and a few coins."] },
+      { id: "under", label: "Under the victim", r: [0, 0.66, 0.7, 0.34], tag: "-", flavor: ["Nothing under the body but the floor."] },
     ],
-    hidden: { label: "Under the victim", r: [0.2, 0.62, 0.5, 0.38], phrase: "under the victim's body", found: "under the victim's body" },
   },
 };
 
 // Rooms: furniture boxes in a 400 x 260 scene (wall down to y = 175). body: free floor for the victim.
+// senses: what a witness glimpses through the door; k: the furniture kinds that give it away to the field agent.
 export const ROOMS = [
-  { id: "library", name: "Library", theme: "library", body: [24, 200, 120, 46], furniture: [
+  { id: "library", name: "Library", theme: "library", body: [24, 200, 120, 46], senses: [{ t: "a great stone fireplace takes up one wall", k: ["fireplace"] }, { t: "it smells of old leather bindings", k: ["bookshelf"] }],
+    furniture: [
     ["bookshelf", 10, 28, 92, 152], ["painting", 170, 18, 60, 52], ["fireplace", 148, 84, 104, 100], ["armchair", 262, 124, 66, 66], ["sidetable", 340, 146, 44, 44], ["rug", 166, 202, 156, 38]] },
-  { id: "study", name: "Study", theme: "study", body: [24, 200, 124, 46], furniture: [
+  { id: "study", name: "Study", theme: "study", body: [24, 200, 124, 46], senses: [{ t: "a writing desk stands under a lamp", k: ["desk"] }, { t: "it smells of old leather bindings", k: ["bookshelf"] }],
+    furniture: [
     ["bookshelf", 10, 28, 92, 152], ["painting", 160, 26, 84, 58], ["desk", 140, 116, 128, 72], ["window", 296, 22, 86, 108], ["armchair", 300, 134, 66, 62]] },
-  { id: "music", name: "Music room", theme: "music", body: [150, 204, 126, 44], furniture: [
+  { id: "music", name: "Music room", theme: "music", body: [150, 204, 126, 44], senses: [{ t: "a piano gleams in the lamplight", k: ["piano"] }, { t: "the brass horn of a gramophone shines", k: ["gramophone"] }],
+    furniture: [
     ["piano", 14, 92, 150, 96], ["painting", 192, 24, 74, 56], ["gramophone", 196, 104, 60, 80], ["window", 290, 22, 90, 104], ["sofa", 270, 136, 120, 58]] },
-  { id: "conservatory", name: "Conservatory", theme: "conservatory", body: [146, 206, 130, 42], furniture: [
+  { id: "conservatory", name: "Conservatory", theme: "conservatory", body: [146, 206, 130, 42], senses: [{ t: "it smells of wet earth and orchids", k: ["potting", "palm"] }, { t: "palm fronds brush the glass", k: ["palm"] }],
+    furniture: [
     ["potting", 18, 112, 138, 72], ["palm", 176, 52, 74, 136], ["window", 284, 18, 98, 104], ["armchair", 296, 132, 66, 62]] },
-  { id: "billiard", name: "Billiard room", theme: "billiard", body: [16, 206, 110, 42], furniture: [
+  { id: "billiard", name: "Billiard room", theme: "billiard", body: [16, 206, 110, 42], senses: [{ t: "a lamp hangs low over green baize", k: ["billiard"] }, { t: "it smells of cue chalk and cigar smoke", k: ["cuerack", "billiard"] }],
+    furniture: [
     ["cuerack", 18, 36, 42, 128], ["painting", 150, 26, 92, 60], ["billiard", 112, 130, 186, 74], ["sideboard", 314, 104, 76, 80]] },
-  { id: "dining", name: "Dining room", theme: "dining", body: [270, 204, 118, 44], furniture: [
+  { id: "dining", name: "Dining room", theme: "dining", body: [270, 204, 118, 44], senses: [{ t: "a grandfather clock ticks in the corner", k: ["clock"] }, { t: "a long table is laid for breakfast", k: ["table"] }],
+    furniture: [
     ["clock", 18, 36, 44, 150], ["painting", 128, 22, 92, 60], ["table", 76, 138, 196, 62], ["sideboard", 306, 102, 82, 82], ["window", 236, 22, 60, 76]] },
-  { id: "kitchen", name: "Kitchen", theme: "kitchen", body: [36, 204, 140, 44], furniture: [
+  { id: "kitchen", name: "Kitchen", theme: "kitchen", body: [36, 204, 140, 44], senses: [{ t: "it smells of bread and coal smoke", k: ["stove"] }, { t: "jars of preserves line the shelves", k: ["pantry"] }],
+    furniture: [
     ["stove", 16, 96, 112, 90], ["pantry", 148, 28, 92, 154], ["window", 270, 26, 90, 78], ["table", 254, 136, 132, 60]] },
-  { id: "bedroom", name: "Master bedroom", theme: "bedroom", body: [12, 202, 134, 44], furniture: [
+  { id: "bedroom", name: "Master bedroom", theme: "bedroom", body: [12, 202, 134, 44], senses: [{ t: "it smells of lavender and face powder", k: ["vanity"] }, { t: "a big bed is turned down for the night", k: ["bed"] }],
+    furniture: [
     ["wardrobe", 16, 26, 100, 160], ["window", 186, 22, 90, 78], ["bed", 148, 116, 172, 86], ["vanity", 334, 92, 56, 92], ["rug", 166, 210, 160, 34]] },
-  { id: "cellar", name: "Wine cellar", theme: "cellar", body: [148, 204, 142, 44], furniture: [
+  { id: "cellar", name: "Wine cellar", theme: "cellar", body: [148, 204, 142, 44], senses: [{ t: "stone steps lead down into the cold", k: ["winerack", "barrel"] }, { t: "it smells of old wine and damp", k: ["winerack"] }],
+    furniture: [
     ["winerack", 14, 32, 132, 150], ["barrel", 164, 116, 68, 68], ["barrel", 240, 116, 68, 68], ["chest", 318, 134, 72, 52]] },
 ];
 
@@ -495,7 +551,7 @@ function layoutRoom(room, victim) {
     f.children = k.parts.map((p) => mk(f, p, f.id));
     if (k.hidden) f.hiddenDef = { ...k.hidden, ...abs(f, k.hidden.r) };
   }
-  return { id: room.id, name: room.name, theme: room.theme, body: room.body, furniture };
+  return { id: room.id, name: room.name, theme: room.theme, body: room.body, senses: room.senses, furniture };
 }
 
 export function leaves(node) {
@@ -513,6 +569,12 @@ function build(code, attempt) {
   const manor = R.pick(MANORS);
   const V = victim.short;
   const nm = (s) => s.short;
+  const cause = R.pick(Object.keys(CAUSES));
+
+  // Twists come first: they decide who may lie and where people claim to have been.
+  const coreFits = (t) => (t === "poison" ? cause === "poison" : t === "moved" ? cause !== "poison" : true);
+  let core = R.int(10) < 6 ? R.pick(CORE_TWISTS.filter(coreFits)) : null;
+  const side = R.int(10) < 5 ? R.pick(SIDE_TWISTS) : null;
 
   // Three suspects with three different hair colours, in a random order. One is the murderer (M). Each of the
   // others independently lies to hide a secret (L) or tells the truth (H): a case has zero, one or two such liars.
@@ -520,7 +582,7 @@ function build(code, attempt) {
   const chosen = [];
   for (const s of pool) if (chosen.length < 3 && !chosen.some((c) => c.tone === s.tone)) chosen.push(s);
   const mi = R.int(3);
-  const suspects = chosen.map((lib, i) => ({ id: lib.id, lib, role: i === mi ? "M" : R.int(2) ? "L" : "H", name: lib.name, short: lib.short, title: lib.title }));
+  const suspects = chosen.map((lib, i) => ({ id: lib.id, lib, role: i === mi ? "M" : side === "lovers" || R.int(2) ? "L" : "H", name: lib.name, short: lib.short, title: lib.title }));
   const M = suspects[mi];
   const others = (s) => suspects.filter((o) => o !== s);
   const W = R.pick(others(M)); // saw the weapon being hidden
@@ -530,90 +592,169 @@ function build(code, attempt) {
   const [S, A, B] = rooms;
   const roomOf = (f) => rooms.find((r) => r.furniture.includes(f));
 
-  const cause = R.pick(Object.keys(CAUSES));
   const ofCause = R.shuffle(WEAPONS.filter((w) => w.cause === cause));
   const weapon = ofCause[0], decoy = ofCause[1];
 
-  const T = 21 * 60 + 40 + 5 * R.int(15); // between 9:40 and 10:50 pm
-  const time = fmtTime(T);
-  const later = fmtTime(T + 5 + 5 * R.int(3));
-
-  // Every suspect has a motive, claims an activity somewhere and shows a trace. Only the facts behind them differ.
+  // Every suspect has a motive and claims an activity somewhere. When the body was moved, the murderer names the
+  // room where the murder really happened, and nobody truthful claims to have been there as well.
   const motives = R.shuffle(MOTIVES).slice(0, 3);
+  suspects.forEach((s, i) => { s.motive = motives[i]; s.lost = R.int(2) === 0; });
   const claimable = R.shuffle([A, B].flatMap((r) => r.furniture.filter((f) => KINDS[f.kind].activity)));
-  suspects.forEach((s, i) => {
-    s.motive = motives[i];
-    s.claim = { f: claimable[i], room: roomOf(claimable[i]), act: KINDS[claimable[i].kind].activity };
-    if (s.role === "L") s.secret = SECRETS[s.motive.id];
-    s.lost = R.int(2) === 0;
-  });
-  const spareTraces = R.shuffle(TRACES.filter((t) => !suspects.some((s) => s.secret && s.secret.trace === t)));
-  for (const s of suspects) s.trace = s.secret ? s.secret.trace : spareTraces.pop();
+  const take = (ok) => { const i = claimable.findIndex(ok); return i < 0 ? null : claimable.splice(i, 1)[0]; };
+  const claims = new Map([[M, take(() => true)]]);
+  const mRoom = roomOf(claims.get(M));
+  for (const s of others(M).sort((a, b) => (a.role === "H" ? 0 : 1) - (b.role === "H" ? 0 : 1))) {
+    let f = core === "moved" && s.role === "H" ? take((x) => roomOf(x) !== mRoom) : take(() => true);
+    if (!f) { core = null; f = take(() => true); }
+    claims.set(s, f);
+  }
+  for (const s of suspects) { const f = claims.get(s); s.claim = { f, room: roomOf(f), act: KINDS[f.kind].activity }; }
+  const trueAlibi = core === "staged" || core === "moved" || core === "poison"; // the murderer's alibi checks out
+  const MR = core === "moved" ? mRoom : S; // where the murder happened
 
-  // Hidden spots: something of the murderer's under the victim, the weapon in another room. Some motive papers and some
-  // unrelated things are hidden too, so a hidden spot doesn't promise a real clue.
-  const hiddenIn = (room) => room.furniture.filter((f) => f.hiddenDef && f.kind !== "body");
-  const spotToken = S.furniture.find((f) => f.kind === "body");
-  const spotWeapon = R.pick([...hiddenIn(A), ...hiddenIn(B)]);
+  // Times: the murder on a quarter hour, so a clock chimes. The watch shows it, unless the murderer moved the hands.
+  const T = 21 * 60 + 45 + 15 * R.int(5);
+  const time = fmtTime(T);
+  const watchAt = core === "staged" ? T + 45 + 5 * R.int(5) : T + R.int(4);
+  const watch = fmtTime(watchAt);
+  const served = fmtTime(T - 45 - 5 * R.int(4));
+  const later = fmtTime(T + 10 + 5 * R.int(2));
+
+  // Secrets and traces. A lying suspect shows the trace of their secret. The murderer, when caught in a lie, falls
+  // back on a made-up secret of the same kind, but shows a trace that doesn't fit it.
+  const lovers = side === "lovers" ? others(M) : [];
+  const tryst = R.pick(TRYST), trystTrace = R.pick(TRYST_TRACE);
+  for (const s of suspects) if (s.role === "L") s.secret = lovers.includes(s) ? { lover: lovers.find((o) => o !== s) } : SECRETS[s.motive.id];
+  M.cover = trueAlibi ? null : SECRETS[M.motive.id];
+  const spareTraces = R.shuffle(TRACES.filter((t) => !suspects.some((s) => SECRETS[s.motive.id].trace === t)));
+  for (const s of suspects) s.trace = lovers.includes(s) ? trystTrace : s.role === "L" ? s.secret.trace : spareTraces.pop();
+
+  // Hidden spots: the weapon in another room; some motive papers and unrelated things too, so a hidden spot
+  // doesn't promise a real clue.
+  const hiddenIn = (room) => room.furniture.filter((f) => f.hiddenDef);
+  const bodyF = S.furniture.find((f) => f.kind === "body");
+  const spotWeapon = R.pick([...hiddenIn(A), ...hiddenIn(B)].filter((f) => roomOf(f) !== MR));
   const spare = R.shuffle(rooms.flatMap(hiddenIn).filter((f) => f !== spotWeapon));
   for (const s of suspects) s.docSpot = R.int(2) && spare.length ? spare.pop() : null;
   const decoySpot = R.int(5) < 2 && spare.length ? spare.pop() : null;
   const leadSpots = [];
   for (let i = R.int(3); i > 0 && spare.length; i--) leadSpots.push(spare.pop());
+  // A lock in about two cases out of three. It holds the papers of a suspect whose papers aren't hidden elsewhere.
+  const lockable = suspects.filter((s) => !s.docSpot);
+  let locked = R.int(3) && lockable.length ? R.pick(lockable) : null;
+
+  // How a witness describes the room something went into: by a sight or smell that, among this case's rooms with
+  // that kind of furniture, only that room has. The field agent has to work out which room it is.
+  const kindsOf = (r) => new Set(r.furniture.map((f) => f.kind));
+  const glimpse = (f) => {
+    const room = roomOf(f);
+    const fits = (sense, r) => sense.k.some((k) => kindsOf(r).has(k)) && kindsOf(r).has(f.kind);
+    const ok = R.shuffle(room.senses).filter((sense) => rooms.filter((r) => fits(sense, r)).length === 1);
+    return ok.length ? `a room where ${ok[0].t}` : `the ${rn(room)}`;
+  };
 
   // ---------- clues (field agent finds them) ----------
   const clues = {};
   const addClue = (id, c) => { clues[id] = { id, ...c }; };
-  const struggle = cause === "poison" ? "" : " There was a struggle: a chair is knocked over and the rug is rucked up.";
-  addClue("body", { title: "The victim", icon: "watch", text: `${victim.name} lies dead on the floor of the ${rn(S)}, ${CAUSES[cause]}.${struggle} The victim's wristwatch smashed in the fall and stopped at ${time}.` });
+  let bodyText = `${victim.name} lies dead on the floor of the ${rn(S)}, ${CAUSES[cause]}.`;
+  if (core === "moved") bodyText += ` Yet nothing in the room is disturbed, and two long scuff marks run across the floor from the door to the body.`;
+  else if (cause !== "poison") bodyText += " There was a struggle: a chair is knocked over and the rug is rucked up.";
+  if (core === "poison") bodyText += " The glass smells of lemon and cloves: a hot toddy, long gone cold.";
+  bodyText += ` The victim's wristwatch smashed in the fall and stopped at ${watch}.`;
+  if (core === "staged") bodyText += ` ${R.pick(STAGED_TELL)}`;
+  addClue("body", { title: "The victim", icon: "watch", text: bodyText });
   for (const s of suspects) {
-    addClue(`alibi_${s.id}`, { title: s.claim.act.title, icon: "magnifier", text: s.role === "H" ? s.claim.act.yes : s.claim.act.no });
+    const honest = s.role === "H" || (s === M && trueAlibi);
+    addClue(`alibi_${s.id}`, { title: s.claim.act.title, icon: "magnifier", text: honest ? s.claim.act.yes : s.claim.act.no });
     const doc = fill(s.motive.doc, { V, who: nm(s), surname: s.lib.surname });
-    addClue(`motive_${s.id}`, { title: "Private papers", icon: s.motive.icon, tag: `Motive for ${nm(s)}: ${s.motive.label}`, text: s.docSpot ? `${doc} It was hidden ${s.docSpot.hiddenDef.found}.` : doc });
+    addClue(`motive_${s.id}`, { title: "Private papers", icon: s.motive.icon, text: s.docSpot ? `${doc} It was hidden ${s.docSpot.hiddenDef.found}.` : doc });
   }
-  addClue("weapon", { title: cap(weapon.name), icon: weapon.id, tag: "Murder weapon", text: `A ${weapon.name}, hidden ${spotWeapon.hiddenDef.found}: ${weapon.trace}. Caught on it is a single ${M.lib.tone} hair.` });
-  addClue("decoy", { title: cap(decoy.name), icon: decoy.id, text: `A ${decoy.name}${decoySpot ? `, tucked away ${decoySpot.hiddenDef.found}` : ""}. Clean and dusty; nobody has handled it in days.` });
+  const slow = core === "poison" ? " The label warns that it works slowly: death follows within the hour." : "";
+  addClue("weapon", { title: cap(weapon.name), icon: weapon.id, text: `${cap(an(weapon.name))}, hidden ${spotWeapon.hiddenDef.found}: ${weapon.trace}.${slow} Caught on it is a single ${M.lib.tone} hair.` });
+  addClue("decoy", { title: cap(decoy.name), icon: decoy.id, text: `${cap(an(decoy.name))}${decoySpot ? `, tucked away ${decoySpot.hiddenDef.found}` : ""}. Clean and dusty; nobody has handled it in days.` });
+  // A truthful suspect, if there is one, was in the room the planted weapon was taken from and noticed it go.
+  let planted = null, plantedFrom = null, plantWitness = null;
+  if (core === "planted") {
+    planted = R.pick(WEAPONS.filter((w) => w.cause !== cause));
+    const honest = others(M).filter((s) => s.role === "H");
+    plantWitness = honest.length ? R.pick(honest) : null;
+    plantedFrom = plantWitness ? plantWitness.claim.room : R.pick([A, B]);
+    addClue("planted", { title: cap(planted.name), icon: planted.id, text: `${cap(an(planted.name))}, lying in plain sight in the ${rn(S)}: ${planted.trace}.` });
+  }
+  if (core === "moved") addClue("stain", { title: "Scrubbed stain", icon: "magnifier", text: "A patch scrubbed almost white, still damp and smelling of carbolic soap. A rusty rim remains in the cracks. Somebody cleaned up here tonight." });
 
   // ---------- placing things in the rooms ----------
-  const content = {}; // leaf id -> { clue } or { text }
+  const content = {}; // leaf id -> { clue }, { text } or { lock: true, clue }
   const taken = new Set();
   const put = (leaf, c) => { content[leaf.id] = c; taken.add(leaf.id); };
   const partOf = (f, pid) => f.children.find((c) => c.id === `${f.id}.${pid}`);
+  const roomOfLeaf = (l) => rooms.find((r) => l.id.startsWith(`${r.id}.`));
   for (const s of suspects) put(partOf(s.claim.f, s.claim.act.part), { clue: `alibi_${s.id}` });
-  put(spotToken.children[0], { clue: "body" });
+  put(partOf(bodyF, "victim"), { clue: "body" });
   const freeLeaves = (where, room) => R.shuffle((room ? [room] : rooms).flatMap((r) => r.furniture.filter((f) => f.kind !== "body").flatMap(leaves)))
     .filter((l) => !taken.has(l.id) && where.includes(l.tag));
   const place = (where, c, room) => { const l = freeLeaves(where, room)[0]; if (l) put(l, c); return l; };
-  for (const s of suspects) if (!s.docSpot) place("c", { clue: `motive_${s.id}` });
+  let lock = null;
+  if (locked) {
+    const l = place("c", { lock: true, clue: `motive_${locked.id}` });
+    if (l) {
+      const [event, ...rest] = R.shuffle(LOCK_EVENTS);
+      const dates = [];
+      while (dates.length < 3) {
+        const d = [1 + R.int(28), 1 + R.int(12)];
+        if (!dates.some((x) => x[0] === d[0] && x[1] === d[1])) dates.push(d);
+      }
+      const two = (n) => String(n).padStart(2, "0");
+      lock = { leaf: l.id, clue: `motive_${locked.id}`, combo: two(dates[0][0]) + two(dates[0][1]), event: event.id };
+      const label = l.label.toLowerCase();
+      addClue("lock", { title: `Locked ${label}`, icon: "key", text: `The ${label} in the ${rn(roomOfLeaf(l))} is locked with four little brass dials: two for the day, two for the month. Whatever is inside, ${V} wanted it kept safe.` });
+      lock.phrase = fill(event.phrase, { V });
+      [event, rest[0], rest[1]].forEach((e, i) => {
+        const text = fill(e.item, { V, date: `${dates[i][0]} ${MONTHS[dates[i][1] - 1]}` });
+        if (!place("sw", { text }) && !place("c", { text })) throw new Error("no room for a keepsake");
+      });
+    } else locked = null;
+  }
+  for (const s of suspects) if (!s.docSpot && s !== locked) place("c", { clue: `motive_${s.id}` });
   if (!decoySpot) place("sf", { clue: "decoy" });
+  if (planted) place("sf", { clue: "planted" }, S);
+  if (core === "moved" && !place("f", { clue: "stain" }, MR) && !place("s", { clue: "stain" }, MR)) place("c", { clue: "stain" }, MR);
 
-  // Presence: a dropped belonging puts its owner in a room. Fresh at the scene only for the murderer, fresh in the
-  // claimed room only for a truthful suspect, dusty (lost days ago) for anyone.
-  const presence = {}; // clue id -> { owner, fresh, room }
+  // Presence: a dropped belonging puts its owner in a room. Fresh at the scene only for the murderer (or for the
+  // suspect the murderer frames), fresh in the claimed room only for a truthful suspect, dusty for anyone.
+  const presence = {}; // clue id -> { owner, fresh, room, planted }
   const token = (s) => s.lib.token;
   const finds = []; // { id, item, owner, fresh, open, lead }
   const library = R.shuffle(FINDS);
   const fillFind = (item, s) => fill(item.text, { V, X: nm(s), I: s.lib.surname[0] });
-  // Under the victim: the murderer's token if it came off, otherwise another belonging.
-  let atScene;
-  if (M.lost) {
+  let atScene, framed = null;
+  if (side === "frame") {
+    framed = R.pick(others(M));
+    framed.lost = true;
+    M.lost = false;
+    atScene = `token_${framed.id}`;
+    addClue(atScene, { title: "Something dropped", icon: token(framed).icon, text: `${cap(token(framed).name)}, lying under the victim's body.${FRESH}` });
+    presence[atScene] = { owner: framed, fresh: true, room: S, planted: true };
+  } else if (M.lost) {
     atScene = `token_${M.id}`;
-    addClue(atScene, { title: "Something dropped", icon: token(M).icon, text: `${cap(token(M).name)}, lying ${spotToken.hiddenDef.found}.${FRESH}` });
+    addClue(atScene, { title: "Something dropped", icon: token(M).icon, text: `${cap(token(M).name)}, lying under the victim's body.${FRESH}` });
+    presence[atScene] = { owner: M, fresh: true, room: S };
   } else {
     const item = library.splice(library.findIndex((x) => x.presence), 1)[0];
     atScene = `find${finds.length}`;
-    addClue(atScene, { title: item.title, icon: item.icon, text: `${fillFind(item, M)} It was lying ${spotToken.hiddenDef.found}.${FRESH}` });
+    addClue(atScene, { title: item.title, icon: item.icon, text: `${fillFind(item, M)} It was lying under the victim's body.${FRESH}` });
     finds.push({ id: atScene, item, owner: M, fresh: true, open: false });
+    presence[atScene] = { owner: M, fresh: true, room: S };
   }
-  presence[atScene] = { owner: M, fresh: true, room: S };
+  put(partOf(bodyF, "under"), { clue: atScene });
   for (const s of others(M)) {
-    if (!s.lost) continue;
+    if (!s.lost || s === framed) continue;
     const fresh = s.role === "H" && R.int(2) === 0;
     const id = `token_${s.id}`;
     const l = place("sf", { clue: id }, fresh ? s.claim.room : null);
     if (!l) { s.lost = false; continue; }
     addClue(id, { title: "Something dropped", icon: token(s).icon, text: `${cap(token(s).name)}.${fresh ? FRESH : DUSTY}` });
-    presence[id] = { owner: s, fresh, room: rooms.find((r) => l.id.startsWith(`${r.id}.`)) };
+    presence[id] = { owner: s, fresh, room: roomOfLeaf(l) };
   }
 
   // Finds: about three in five of the remaining places hold one, each owned by a random suspect.
@@ -631,7 +772,7 @@ function build(code, attempt) {
     want--;
     addClue(id, { title: item.title, icon: item.icon, text: fillFind(item, owner) + (item.presence ? (fresh ? FRESH : DUSTY) : "") });
     finds.push({ id, item, owner, fresh, open: true });
-    if (item.presence) presence[id] = { owner, fresh, room: rooms.find((r) => l.id.startsWith(`${r.id}.`)) };
+    if (item.presence) presence[id] = { owner, fresh, room: roomOfLeaf(l) };
   }
   for (const r of rooms) for (const l of r.furniture.flatMap(leaves)) {
     if (!content[l.id]) content[l.id] = { text: R.pick(l.def.flavor || ["Nothing of interest."]) };
@@ -640,10 +781,10 @@ function build(code, attempt) {
   // ---------- hints (interrogator learns them) ----------
   const hints = {};
   const hidden = []; // { hint, spot, clue, about }
-  hints.hWeapon = { id: "hWeapon", room: roomOf(spotWeapon).id, spot: spotWeapon.id, clue: "weapon",
-    text: `Just after ${time}, ${nm(W)} saw someone hurry out of the ${rn(S)} with something wrapped in a cloth and hide it ${spotWeapon.hiddenDef.phrase}.` };
-  hints.hToken = { id: "hToken", room: S.id, spot: spotToken.id, clue: atScene,
-    text: M.lost ? `${nm(M)} has lost ${token(M).name}, and admits to having been in the ${rn(S)} tonight.` : `${nm(M)} admits to having been in the ${rn(S)} tonight.` };
+  const sighting = core === "poison"
+    ? `At about ${served} I saw someone come out of the ${rn(S)} with something small in their hand, a bottle or a tin. It was too dark to see who. They went into ${glimpse(spotWeapon)} and hid it ${spotWeapon.hiddenDef.phrase}.`
+    : `Just after ${time} I saw someone hurry out of the ${rn(MR)} with something wrapped in a cloth. It was too dark to see who. They went into ${glimpse(spotWeapon)} and hid it ${spotWeapon.hiddenDef.phrase}.`;
+  hints.hWeapon = { id: "hWeapon", room: roomOf(spotWeapon).id, spot: spotWeapon.id, clue: "weapon", text: `${nm(W)}: "${sighting}"` };
   for (const s of suspects) if (s.docSpot) hidden.push({ hint: `hDoc_${s.id}`, spot: s.docSpot, clue: `motive_${s.id}`, about: s });
   if (decoySpot) hidden.push({ hint: "hLead0", spot: decoySpot, clue: "decoy", about: R.pick(suspects) });
   const papers = library.filter((x) => !x.presence && x.where.includes("c"));
@@ -654,63 +795,93 @@ function build(code, attempt) {
     finds.push({ id, item, owner, fresh: false, open: false });
     hidden.push({ hint: `hLead${hidden.length}`, spot, clue: id, about: R.pick(suspects) });
   }
-  // Each hidden spot gets a hint, told either as an opinion about a suspect or by the owner of a find.
+  if (lock) hints.hLock = { id: "hLock", text: `${V} set every lock in the house to the date of ${lock.phrase}.` };
+
+  // Some opinions are fixed by a twist; the rest may carry a hint about a hidden spot.
+  const fixedOpinion = {}; // `${speaker}>${about}` -> text
+  const confessor = side === "confession" ? R.pick(others(M)) : null;
+  const server = core === "poison" ? R.pick(others(M).filter((s) => s !== confessor)) : null;
+  if (confessor) fixedOpinion[`${confessor.id}>${M.id}`] = `Leave ${nm(M)} out of this. ${nm(M)} has suffered enough in this house.`;
+  if (server) fixedOpinion[`${server.id}>${M.id}`] = `${nm(M)} carried a hot toddy to ${V} in the ${rn(S)} at about ${served}. Very attentive, for once.`;
   const opinionHint = {}; // `${speaker}>${about}` -> hint id
   for (const h of hidden) {
     hints[h.hint] = { id: h.hint, room: roomOf(h.spot).id, spot: h.spot.id, clue: h.clue,
-      text: `${V} had words with ${nm(h.about)} this afternoon and waved a paper about. Later ${V} was seen hiding something ${h.spot.hiddenDef.phrase}.` };
+      text: `${V} had words with ${nm(h.about)} this afternoon and waved a paper about. Later ${V} was seen going into ${glimpse(h.spot)} to hide something ${h.spot.hiddenDef.phrase}.` };
     const carriers = finds.filter((f) => f.open && !f.item.presence && !f.lead && f.owner !== h.about);
-    const speakers = others(h.about).filter((s) => !opinionHint[`${s.id}>${h.about.id}`]);
+    const speakers = others(h.about).filter((s) => !opinionHint[`${s.id}>${h.about.id}`] && !fixedOpinion[`${s.id}>${h.about.id}`]);
     if (carriers.length && (R.int(2) || !speakers.length)) R.pick(carriers).lead = h.hint;
-    else opinionHint[`${R.pick(speakers).id}>${h.about.id}`] = h.hint;
+    else if (speakers.length) opinionHint[`${R.pick(speakers).id}>${h.about.id}`] = h.hint;
+    else {
+      const any = finds.filter((f) => f.open && !f.item.presence && !f.lead);
+      if (!any.length) throw new Error("no one to carry a hint");
+      R.pick(any).lead = h.hint;
+    }
   }
 
   // ---------- dialogue ----------
   // requires: tokens the interrogator must hold. clue:x = clue code entered, q:sid:qid = question asked, ev:x = event.
   // Lines depend on facts (where someone was, what they saw), never on a fixed part a suspect plays.
   const say = (s, text) => `${s.lib.voice}${text}`;
-  const sighting = `Just after ${time} I saw someone hurry out of the ${rn(S)} with something wrapped in a cloth. It was too dark to see who. Whoever it was hid it ${spotWeapon.hiddenDef.phrase}.`;
   const evening = R.shuffle(EVENING), noticed = R.shuffle(NOTICED);
+  // Somebody heard the cry and the clock. Never the murderer when the murderer's alibi depends on the time.
+  const chimer = R.pick(suspects.filter((s) => !(s === W && s.role === "H") && !(s === M && trueAlibi)));
+  const chime = `I heard a cry from the direction of the ${rn(MR)}, just as the hall clock chimed. ${time}, it must have been.`;
   let opinions = [];
   const nextOpinion = () => { if (!opinions.length) opinions = R.shuffle(OPINIONS); return opinions.pop(); };
-  // Two truthful suspects in the same room saw each other. Anyone else says they were alone, true or not.
+  // Suspects who really were where they claim saw each other there. Anyone else says they were alone, true or not.
+  // A murderer with a staged alibi only turned up after the murder, and a truthful witness says when.
+  const start = new Map(suspects.map((s) => [s, s === M && core === "staged" ? T + 15 + 5 * R.int(3) : T - 30 - 5 * R.int(5)]));
+  const there = (s) => s.role === "H" || (s === M && trueAlibi);
   const company = (s) => {
-    const with_ = s.role === "H" ? suspects.filter((o) => o !== s && o.role === "H" && o.claim.room === s.claim.room) : [];
-    return with_.length ? `${nm(with_[0])} was there too, ${with_[0].claim.act.act}.` : R.pick(ALONE);
+    const with_ = there(s) ? suspects.filter((o) => o !== s && there(o) && o.claim.room === s.claim.room) : [];
+    if (!with_.length) return R.pick(ALONE);
+    const o = with_[0];
+    const late = o === M && core === "staged" ? ` ${nm(o)} came in at about ${fmtTime(start.get(o))}.` : "";
+    return `${nm(o)} was there too, ${o.claim.act.act}.${late}`;
   };
+  const wrong = R.pick(Object.keys(CAUSES).filter((c) => c !== cause));
+  const lockKnower = lock ? R.pick(suspects) : null;
   const dialog = {};
   suspects.forEach((s, idx) => {
     const opinion = (o) => {
-      const hid = opinionHint[`${s.id}>${o.id}`];
+      const key = `${s.id}>${o.id}`;
+      if (fixedOpinion[key]) return { text: say(s, fixedOpinion[key]) };
+      const hid = opinionHint[key];
       return hid ? { text: say(s, hints[hid].text), gives: [hid] } : { text: say(s, fill(nextOpinion(), { o: nm(o), V })) };
     };
     const { room, act } = s.claim;
+    const until = watchAt + 20 + 5 * R.int(4);
     const qs = [
       { id: "about", label: `Who are you to ${V}?`, text: say(s, fill(s.lib.about, { V })) },
       { id: "evening", label: "What did you do this evening?", text: say(s, fill(evening[idx], { V })) },
       ...others(s).map((o) => ({ id: `on:${o.id}`, label: `What do you make of ${nm(o)}?`, ...opinion(o) })),
-      { id: "where", label: `Where were you at ${time}?`, requires: ["clue:body"], text: say(s, `At ${time}? I was in the ${rn(room)}, ${act.act}. ${company(s)}`) },
+      { id: "where", label: `Where were you at ${watch}?`, requires: ["clue:body"], text: say(s, `At ${watch}? I was in the ${rn(room)}, ${act.act}, from ${fmtTime(start.get(s))} until ${fmtTime(until)}. ${company(s)}`) },
       s === W && s.role === "H"
         ? { id: "noticed", label: "Did you notice anything unusual?", requires: ["clue:body"], text: say(s, `Yes. ${sighting}`), gives: ["hWeapon"] }
-        : { id: "noticed", label: "Did you notice anything unusual?", requires: ["clue:body"], text: say(s, fill(noticed[idx], { T: time })) },
+        : { id: "noticed", label: "Did you notice anything unusual?", requires: ["clue:body"], text: say(s, s === chimer ? chime : fill(noticed[idx], { T: time })) },
     ];
     for (const q of qs) { q.mood = "calm"; q.requires = q.requires || []; q.gives = q.gives || []; q.events = [`q:${s.id}:${q.id}`]; }
 
+    // witness: true marks a reaction to something the suspect doesn't own.
     const confront = {};
     const asked = `q:${s.id}:where`;
     const broken = `ev:broken_${s.id}`;
-    if (s.role === "M") {
-      confront[`alibi_${s.id}`] = { requires: [asked], text: `...All right. I wasn't in the ${rn(room)}. I went to the ${rn(S)} to have it out with ${V}, about a private matter. But ${V} was alive when I left. I swear it.`, mood: "afraid", gives: ["hToken"], events: [broken] };
-    } else if (s.role === "L") {
-      confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${fill(s.secret.act, { V })}. ${fill(s.motive.admit, { V })}${s === W ? ` But on my way back... ${sighting}` : ""}`, mood: "afraid", gives: s === W ? ["hWeapon"] : [], events: [broken] };
-    } else {
+    const seenToo = s === W ? ` But on my way back... ${sighting}` : "";
+    if (s.role === "H" || (s === M && trueAlibi)) {
       confront[`alibi_${s.id}`] = { requires: [asked], text: `Exactly as I told you. I was in the ${rn(room)}, ${act.act}.`, mood: "calm" };
+    } else if (s === M) {
+      confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${fill(M.cover.act, { V })}. ${fill(s.motive.admit, { V })}`, mood: "afraid", events: [broken] };
+    } else if (s.secret.lover) {
+      confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${tryst}, with ${nm(s.secret.lover)}. We have kept it from everyone for a year, and I would rather it stayed that way.${seenToo}`, mood: "afraid", gives: s === W ? ["hWeapon"] : [], events: [broken] };
+    } else {
+      confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${fill(s.secret.act, { V })}. ${fill(s.motive.admit, { V })}${seenToo}`, mood: "afraid", gives: s === W ? ["hWeapon"] : [], events: [broken] };
     }
     confront[`motive_${s.id}`] = { text: fill(s.motive.admit, { V }), mood: "uneasy" };
     const owned = (id, react) => {
       const p = presence[id];
       if (!p.fresh) return { text: react ? fill(react, { V }) : "That's mine. I lost it days ago. Look at the dust on it.", mood: "calm" };
-      if (p.room === S && s === M) return { requires: [broken], text: `So I dropped it in the ${rn(S)}. I've told you I was there.`, mood: "angry", alt: `That? I could have lost that anywhere, any day this week.` };
+      if (p.planted) return { text: "That's mine, yes. I lost it yesterday and turned my room upside down looking for it. How on earth did it get there?", mood: "afraid" };
+      if (p.room === S && s === M) return { text: "That? I could have lost that anywhere, any day this week.", mood: "angry" };
       return { text: `Yes, that's mine. I was in the ${rn(p.room)} this evening, as I told you.`, mood: "calm" };
     };
     if (s.lost) confront[`token_${s.id}`] = owned(`token_${s.id}`);
@@ -720,10 +891,21 @@ function build(code, attempt) {
       const lead = f.lead ? ` But if you want something worth your time: ${hints[f.lead].text}` : "";
       confront[f.id] = { text: fill(f.item.react, { V }) + lead, mood: "uneasy", gives: f.lead ? [f.lead] : [] };
     }
-    confront.body = { text: "Dreadful. Simply dreadful. Must you show me that?", mood: "uneasy" };
-    confront.decoy = { text: `A ${decoy.name}? What about it?`, mood: "calm" };
-    confront.weapon = s === M ? { text: `A hair? Half this house has been in and out of every room. That proves nothing!`, mood: "angry" }
-      : { text: `Good heavens. Is that what did it? I've never touched it.`, mood: "afraid" };
+    confront.body = s === confessor
+      ? { text: `Stop. Stop! It was me. I ${fill(CONFESS[wrong], { V })}. Take me away and leave the others in peace.`, mood: "afraid", events: ["ev:confess"] }
+      : { text: "Dreadful. Simply dreadful. Must you show me that?", mood: "uneasy" };
+    confront.decoy = { text: `${cap(an(decoy.name))}? What about it?`, mood: "calm" };
+    confront.weapon = s === M ? { text: "A hair? Half this house has been in and out of every room. That proves nothing!", mood: "angry" }
+      : s === confessor ? { text: "I... yes. I threw it away afterwards. I don't remember where.", mood: "afraid" }
+      : { text: "Good heavens. Is that what did it? I've never touched it.", mood: "afraid" };
+    if (framed && s === M) confront[atScene] = { text: `That's ${nm(framed)}'s, isn't it? Well. There you are, then.`, mood: "calm", witness: true };
+    if (framed && s !== M && s !== framed) confront[atScene] = { text: `That's ${nm(framed)}'s. ${nm(framed)} dropped it at dinner yesterday, and ${nm(M)} picked it up and promised to hand it back.`, mood: "uneasy", events: ["ev:frame"], witness: true };
+    if (planted && s === M) confront.planted = { text: "Well, there's your weapon, Inspector. What more do you want?", mood: "angry", witness: true };
+    if (planted && s === plantWitness) confront.planted = { text: `That ${planted.name}? It belongs in the ${rn(plantedFrom)}. It was there at ${later}, I'm certain; I remember it catching the light. When I looked up again a while later, it was gone.`, mood: "uneasy", events: ["ev:planted"], witness: true };
+    if (core === "moved" && s === M) confront.stain = { text: "Something spilled, I expect. The maids are forever scrubbing.", mood: "uneasy", witness: true };
+    if (lock) confront.lock = s === lockKnower
+      ? { text: `The combination? ${V} set every lock in the house to the date of ${lock.phrase}. Sentimental, for someone so hard.`, mood: "calm", gives: ["hLock"], witness: true }
+      : { text: `${V} never told me the combination. Ask ${nm(lockKnower)}; ${V} trusted ${nm(lockKnower)} with that sort of thing.`, mood: "calm", witness: true };
     for (const c of Object.values(confront)) { c.requires = c.requires || []; c.gives = c.gives || []; c.events = c.events || []; }
 
     const fillN = (t) => fill(t, { n: nm(s), V });
@@ -737,25 +919,48 @@ function build(code, attempt) {
 
   const hiddenSpots = {};
   for (const h of Object.values(hints)) {
+    if (!h.spot) continue;
     const f = rooms.flatMap((r) => r.furniture).find((x) => x.id === h.spot);
     hiddenSpots[h.spot] = { id: `${f.id}.hidden`, furniture: f.id, room: h.room, label: f.hiddenDef.label, hint: h.id, clue: h.clue,
       x: f.hiddenDef.x, y: f.hiddenDef.y, w: f.hiddenDef.w, h: f.hiddenDef.h };
   }
 
+  // What both detectives must be able to reach between them. The deduction is theirs.
   const solution = { suspect: M.id, weapon: weapon.id, motive: M.motive.id };
-  const goal = ["clue:weapon", `clue:motive_${M.id}`, `clue:${atScene}`, `ev:broken_${M.id}`];
-  const story = [
-    `${M.name} killed ${victim.name} in the ${rn(S)} at ${time}. The motive: ${M.motive.label.toLowerCase()}. ${fill(M.motive.doc, { V, who: nm(M), surname: M.lib.surname })}`,
-    `${nm(M)} used the ${weapon.name}, carried it out wrapped in a cloth and hid it ${spotWeapon.hiddenDef.found}. At the scene ${nm(M)} lost ${M.lost ? token(M).name : `a ${clues[atScene].title.toLowerCase()}`}; it ended up ${spotToken.hiddenDef.found}.`,
-    `${nm(M)} claimed to have been in the ${rn(M.claim.room)}, ${M.claim.act.act}. That was a lie.`,
-    ...others(M).map((s) => s.role === "L"
-      ? `${nm(s)} lied too, to hide a secret: ${nm(s)} was ${fill(s.secret.told, { V })}.`
-      : `${nm(s)} told the truth: ${nm(s)} really was in the ${rn(s.claim.room)}, ${s.claim.act.act}.`),
-    `${nm(W)} saw the murderer carry the weapon away${W.role === "L" ? `, but only said so once the lie about the ${rn(W.claim.room)} fell apart` : ""}.`,
-  ];
+  const goal = ["clue:weapon", `clue:motive_${M.id}`, `clue:${atScene}`];
+  if (!trueAlibi) goal.push(`ev:broken_${M.id}`);
+  if (core === "staged") goal.push(`q:${chimer.id}:noticed`);
+  if (core === "planted") goal.push("clue:planted", ...(plantWitness ? ["ev:planted"] : []));
+  if (core === "moved") goal.push("clue:stain");
+  if (core === "poison") goal.push(`q:${server.id}:on:${M.id}`);
+  if (side === "frame") goal.push("ev:frame");
+  if (side === "confession") goal.push("ev:confess");
+  for (const s of lovers) goal.push(`ev:broken_${s.id}`);
 
-  const kase = { code, version: VERSION, attempt, victim, manor, cause, time, later, rooms, scene: S.id, suspects, weapon: weapon.id, decoy: decoy.id,
-    clues, hints, content, hiddenSpots, dialog, solution, goal, story, briefing: briefing(victim, manor, S, suspects, rooms) };
+  const { act: mAct } = M.claim;
+  const story = [
+    `${M.name} killed ${victim.name} ${core === "moved" ? `in the ${rn(MR)}, then dragged the body into the ${rn(S)}` : `in the ${rn(S)}`}. The motive: ${M.motive.label.toLowerCase()}. ${fill(M.motive.doc, { V, who: nm(M), surname: M.lib.surname })}`,
+    core === "poison"
+      ? `${nm(M)} put the ${weapon.name} into the hot toddy ${nm(M)} brought ${V} at ${served}, then hid it ${spotWeapon.hiddenDef.found}. The poison worked slowly; ${V} died at ${time}.`
+      : `It happened at ${time}. ${nm(M)} used the ${weapon.name}, carried it out wrapped in a cloth and hid it ${spotWeapon.hiddenDef.found}.`,
+  ];
+  if (core === "staged") story.push(`${nm(M)} then set ${V}'s watch forward to ${watch} and went to the ${rn(M.claim.room)} to be seen ${mAct.act}. The alibi was real, but for the wrong time.`);
+  if (core === "moved") story.push(`${nm(M)} scrubbed the floor of the ${rn(MR)} and then claimed to have spent the evening there, ${mAct.act}. That much was true: it was where ${V} died.`);
+  if (core === "poison") story.push(`At ${time}, ${nm(M)} really was in the ${rn(M.claim.room)}, ${mAct.act}. The alibi was true, and meant nothing.`);
+  if (core === "planted") story.push(`To mislead, ${nm(M)} fetched ${an(planted.name)} from the ${rn(plantedFrom)} and left it in the ${rn(S)}. It could not have made the wounds.`);
+  if (!trueAlibi) story.push(`${nm(M)} claimed to have been in the ${rn(M.claim.room)}, ${mAct.act}. That was a lie, and so was the story about ${fill(M.cover.told, { V })}.`);
+  story.push(framed
+    ? `Under the body ${nm(M)} left ${token(framed).name} that ${nm(framed)} had lost the day before, to throw suspicion on ${nm(framed)}.`
+    : `At the scene ${nm(M)} lost ${M.lost ? token(M).name : `a ${clues[atScene].title.toLowerCase()}`}; it ended up under the body.`);
+  if (lovers.length) story.push(`${nm(lovers[0])} and ${nm(lovers[1])} both lied about where they were: they were together ${tryst}, and nobody was to know.`);
+  else for (const s of others(M)) story.push(s.role === "L"
+    ? `${nm(s)} lied too, to hide a secret: ${nm(s)} was ${fill(s.secret.told, { V })}.`
+    : `${nm(s)} told the truth: ${nm(s)} really was in the ${rn(s.claim.room)}, ${s.claim.act.act}.`);
+  if (confessor) story.push(`${nm(confessor)} confessed to shield ${nm(M)}: ${fill(R.pick(BONDS), { P: nm(confessor), M: nm(M) })}. But ${V} was ${CAUSES[cause].split(/[:;]/)[0]}, not killed the way ${nm(confessor)} described.`);
+  story.push(`${nm(W)} saw the murderer ${core === "poison" ? "hide the poison" : "carry the weapon away"}${W.role === "L" ? `, but only said so once the lie about the ${rn(W.claim.room)} fell apart` : ""}.`);
+
+  const kase = { code, version: VERSION, attempt, victim, manor, cause, time, watch, later, rooms, scene: S.id, murderRoom: MR.id, suspects, weapon: weapon.id, decoy: decoy.id,
+    twists: [core, side].filter(Boolean), clues, hints, content, hiddenSpots, lock, dialog, solution, goal, story, briefing: briefing(victim, manor, S, suspects, rooms) };
   // Codes: three characters, unique within the case.
   const used = new Set();
   for (const item of [...Object.values(clues), ...Object.values(hints)]) {
@@ -786,7 +991,10 @@ export function nodesOf(k) {
   const nodes = [];
   for (const r of k.rooms) for (const l of r.furniture.flatMap(leaves)) {
     const c = k.content[l.id];
-    if (c && c.clue) nodes.push({ who: "F", requires: [], gives: [`clue:${c.clue}`], at: l.id });
+    if (c && c.lock) {
+      nodes.push({ who: "F", requires: [], gives: ["clue:lock"], at: l.id });
+      nodes.push({ who: "F", requires: ["hint:hLock"], gives: [`clue:${c.clue}`], at: l.id });
+    } else if (c && c.clue) nodes.push({ who: "F", requires: [], gives: [`clue:${c.clue}`], at: l.id });
   }
   for (const h of Object.values(k.hiddenSpots)) nodes.push({ who: "F", requires: [`hint:${h.hint}`], gives: [`clue:${h.clue}`], at: h.id });
   for (const s of k.suspects) {
@@ -833,7 +1041,7 @@ export function validate(k) {
   const given = new Set(nodesOf(k).flatMap((n) => n.gives));
   for (const id of Object.keys(k.hints)) if (!given.has(`hint:${id}`)) problems.push(`hint ${id} never given`);
   for (const id of Object.keys(k.clues)) {
-    const placed = Object.values(k.content).some((c) => c.clue === id) || Object.values(k.hiddenSpots).some((h) => h.clue === id);
+    const placed = Object.values(k.content).some((c) => c.clue === id || (c.lock && id === "lock")) || Object.values(k.hiddenSpots).some((h) => h.clue === id);
     if (!placed) problems.push(`clue ${id} not placed`);
   }
   return problems;
@@ -843,7 +1051,8 @@ const cache = new Map();
 export function makeCase(code) {
   if (cache.has(code)) return cache.get(code);
   for (let attempt = 0; attempt < 50; attempt++) {
-    const k = build(code, attempt);
+    let k;
+    try { k = build(code, attempt); } catch { continue; }
     if (!validate(k).length) { cache.set(code, k); return k; }
   }
   throw new Error(`No solvable case for ${code}`);
