@@ -22,7 +22,7 @@ export function extractFacts(text, vocab) {
 export function cleanOutput(s) {
   let t = String(s ?? "").replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^\s*<think>\s*/i, "").trim();
   t = t.replace(/^["“”']+|["“”']+$/g, "").trim();
-  return t;
+  return t.replace(/[’‘]/g, "'");
 }
 
 const norm = (s) => s.toLowerCase().replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/\s+/g, " ").trim();

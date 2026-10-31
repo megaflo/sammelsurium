@@ -140,6 +140,10 @@ test("thinking tags and leaked reasoning are handled", () => {
   assert.match(grade({ kind: "flourish" }, "<think>\n\nOkay, so the user wants me to write a line.", vocab).problems.join(), /meta/);
 });
 
+test("curly apostrophes do not hide claims", () => {
+  assert.match(grade({ kind: "filler" }, "I\u2019ve been here all day, sir.", vocab).problems.join(), /claims/);
+});
+
 test("rewrites that drop a whole sentence fail", () => {
   const c = { kind: "rewrite", text: "I wasn't in the dining room. I owed Lord Thorne money. A great deal. Lord Thorne wasn't the forgiving kind.", facts: { times: [], rooms: ["dining room"], names: [] } };
   const g = grade(c, "I wasn't in the dining room, no. Lord Thorne wasn't the forgiving kind, you see.", { rooms: ["dining room"], surnames: [] });
