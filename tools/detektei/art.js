@@ -286,12 +286,15 @@ const F = {
   body(w, h) {
     // A figure lying on the floor, head to the left, one arm thrown out.
     let s = e(w * 0.55, h * 0.78, w * 0.48, h * 0.16, "#00000040");
+    // Head first, so the shoulders overlap it and it stays attached to the body.
+    const hr = h * 0.15, hx = w * 0.18 - hr * 0.6, hy = h * 0.52;
+    s += c(hx, hy, hr, "#e4c2a8");
     s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.98} ${h * 0.44}L${w * 0.98} ${h * 0.62}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, "#2b2a33");
     s += p(`M${w * 0.6} ${h * 0.52}L${w * 0.98} ${h * 0.5}`, "none", `stroke="#1c1b22" stroke-width="2"`);
     s += p(`M${w * 0.3} ${h * 0.36}Q${w * 0.32} ${h * 0.12} ${w * 0.42} ${h * 0.04}`, "none", `stroke="#2b2a33" stroke-width="${h * 0.12}" stroke-linecap="round"`);
     s += c(w * 0.43, h * 0.04, h * 0.07, "#e4c2a8");
-    s += c(w * 0.1, h * 0.52, h * 0.15, "#e4c2a8") + p(`M${w * 0.03} ${h * 0.46}Q${w * 0.1} ${h * 0.3} ${w * 0.17} ${h * 0.44}`, "#6a6a6a");
-    s += r(w * 0.2, h * 0.44, w * 0.06, h * 0.12, "#f4efe2");
+    s += p(`M${hx - hr * 0.95} ${hy - hr * 0.1}Q${hx - hr * 0.6} ${hy - hr * 1.3} ${hx + hr * 0.4} ${hy - hr * 0.95}Q${hx + hr * 0.1} ${hy - hr * 0.5} ${hx - hr * 0.2} ${hy - hr * 0.1}z`, "#6a6a6a");
+    s += r(w * 0.2, h * 0.44, w * 0.05, h * 0.12, "#f4efe2");
     s += c(w * 0.44, h * 0.14, 2.2, "#c9a24a");
     return s;
   },
