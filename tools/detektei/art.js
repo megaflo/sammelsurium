@@ -292,6 +292,21 @@ const F = {
     s += e(w / 2, h * 0.645, w * 0.33, h * 0.016, "#3a2a1c") + l(w / 2, h * 0.58, w / 2, h * 0.645, "#5a4228", 3);
     return s;
   },
+  birdcage(w, h) {
+    // A brass cage on a pedestal stand, a canary on its perch.
+    const brass = "#c9a24a", dark = "#8a6a2a", top = h * 0.1, bot = h * 0.38;
+    let s = l(w / 2, h * 0.44, w / 2, h * 0.96, dark, 3) + p(`M${w * 0.18} ${h}L${w / 2} ${h * 0.9}L${w * 0.82} ${h}`, "none", `stroke="${dark}" stroke-width="3" stroke-linecap="round"`);
+    s += r(w * 0.42, h * 0.44, w * 0.16, h * 0.03, dark);
+    s += p(`M${w * 0.06} ${top}Q${w / 2} ${-h * 0.04} ${w * 0.94} ${top}z`, "#1a2c3d", `opacity=".35"`);
+    s += l(w * 0.22, h * 0.27, w * 0.78, h * 0.27, "#6a4a2a", 1.5) + e(w * 0.44, h * 0.235, w * 0.12, h * 0.03, "#e8c84a") + c(w * 0.56, h * 0.215, h * 0.022, "#e8c84a") + p(`M${w * 0.32} ${h * 0.24}l-${w * 0.1} ${h * 0.02}l${w * 0.04} -${h * 0.025}z`, "#d8b43a") + c(w * 0.575, h * 0.21, 0.8, "#1a1a1a") + p(`M${w * 0.6} ${h * 0.21}l${w * 0.05} ${h * 0.006}l-${w * 0.05} ${h * 0.008}z`, "#d87a2a");
+    s += r(w * 0.7, h * 0.3, w * 0.12, h * 0.03, "#b8bcc2") + r(w * 0.18, h * 0.3, w * 0.1, h * 0.03, "#d8c890");
+    for (let i = 0; i <= 8; i++) { const x = w * (0.06 + i * 0.11); s += l(x, top, x, bot, brass, 1); }
+    s += p(`M${w * 0.06} ${top}Q${w / 2} ${-h * 0.04} ${w * 0.94} ${top}`, "none", `stroke="${brass}" stroke-width="1.5"`);
+    for (let i = 1; i < 8; i++) { const x = w * (0.06 + i * 0.11); s += p(`M${w / 2} ${h * 0.02}Q${x} ${h * 0.03} ${x} ${top}`, "none", `stroke="${brass}" stroke-width=".8"`); }
+    s += l(w * 0.06, top, w * 0.94, top, brass, 1.5) + r(w * 0.02, bot, w * 0.96, h * 0.05, brass) + r(w * 0.02, bot + h * 0.035, w * 0.96, h * 0.015, dark);
+    s += c(w / 2, h * 0.012, 2.5, "none", `stroke="${brass}" stroke-width="1.2"`);
+    return s;
+  },
   sofa(w, h, t) {
     const col = t.chair || "#3f5a7a";
     let s = r(w * 0.06, 0, w * 0.88, h * 0.5, col, `rx="10"`) + r(0, h * 0.26, w * 0.12, h * 0.5, col, `rx="6"`) + r(w * 0.88, h * 0.26, w * 0.12, h * 0.5, col, `rx="6"`);
@@ -317,37 +332,45 @@ const F = {
     return s;
   },
   body(w, h, t, rnd, f) {
-    // A figure lying on the floor, head to the left, one arm thrown out. f.look sets hair, clothes and build.
+    // A figure lying on its back seen from above, head to the left, one arm thrown out. f.look sets hair, clothes and build.
     const L = (f && f.look) || { hair: "short", hairColor: "#6a6a6a", suit: "#2b2a33", shirt: "#f4efe2" };
-    const skin = "#e4c2a8", dress = !!L.dress;
-    let s = e(w * 0.55, h * 0.78, w * 0.48, h * 0.16, "#00000040");
-    const hr = h * 0.15, hx = w * 0.18 - hr * 0.6, hy = h * 0.52;
-    // Long hair spreads on the floor behind the head.
-    if (L.hair === "long") s += p(`M${hx + hr * 0.3} ${hy - hr * 1.1}Q${hx - hr * 2.4} ${hy - hr * 0.8} ${hx - hr * 2.1} ${hy + hr * 0.9}Q${hx - hr * 0.6} ${hy + hr * 1.3} ${hx + hr * 0.4} ${hy + hr * 0.9}z`, L.hairColor);
-    // Head first, so the shoulders overlap it and it stays attached to the body.
-    s += c(hx, hy, hr, skin);
-    const shoe = "#1a1412";
+    const skin = "#e4c2a8", shoe = "#1c1714", dress = !!L.dress, cy = h * 0.55;
+    const X = (v) => n(w * v), Y = (v) => n(h * v);
+    const limb = (pts, col, sw, cap = "round") => p(`M${pts.map(([x, y]) => `${X(x)} ${Y(y)}`).join("L")}`, "none", `stroke="${col}" stroke-width="${n(sw)}" stroke-linecap="${cap}" stroke-linejoin="round"`);
+    let s = e(w * 0.52, h * 0.8, w * 0.48, h * 0.14, "#00000040");
+    const hr = Math.min(h * 0.17, w * 0.06), hx = w * 0.19 - hr * 1.35;
+    // Long hair fans out on the floor behind the head.
+    if (L.hair === "long") s += p(`M${n(hx)} ${n(cy - hr * 1.15)}Q${n(hx - hr * 2.6)} ${n(cy - hr * 1.4)} ${n(hx - hr * 2.2)} ${n(cy)}Q${n(hx - hr * 2.6)} ${n(cy + hr * 1.4)} ${n(hx)} ${n(cy + hr * 1.15)}z`, L.hairColor);
+    // Legs: trousers with shoes, or stockinged shins under a skirt.
     if (dress) {
-      // Stockinged legs and shoes show below a flared skirt.
-      s += l(w * 0.8, h * 0.42, w * 0.93, h * 0.4, "#c9ad98", h * 0.08, `stroke-linecap="round"`) + l(w * 0.8, h * 0.6, w * 0.92, h * 0.66, "#c9ad98", h * 0.08, `stroke-linecap="round"`);
-      s += e(w * 0.95, h * 0.4, w * 0.03, h * 0.07, shoe) + e(w * 0.94, h * 0.67, w * 0.03, h * 0.07, shoe);
-      s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.86} ${h * 0.24}L${w * 0.88} ${h * 0.8}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
-      s += p(`M${w * 0.62} ${h * 0.52}L${w * 0.87} ${h * 0.5}`, "none", `stroke="#00000040" stroke-width="1.5"`);
+      s += limb([[0.78, 0.47], [0.93, 0.42]], "#3a2f2c", h * 0.09) + limb([[0.78, 0.63], [0.93, 0.7]], "#3a2f2c", h * 0.09);
+      s += e(w * 0.95, h * 0.41, h * 0.05, h * 0.07, shoe) + e(w * 0.95, h * 0.71, h * 0.05, h * 0.07, shoe);
+      s += p(`M${X(0.5)} ${Y(0.36)}L${X(0.82)} ${Y(0.24)}Q${X(0.85)} ${Y(0.55)} ${X(0.82)} ${Y(0.86)}L${X(0.5)} ${Y(0.74)}z`, L.suit);
+      s += p(`M${X(0.62)} ${Y(0.34)}Q${X(0.7)} ${Y(0.5)} ${X(0.8)} ${Y(0.42)}M${X(0.62)} ${Y(0.68)}Q${X(0.7)} ${Y(0.6)} ${X(0.8)} ${Y(0.7)}`, "none", `stroke="#00000033" stroke-width="1.2"`);
     } else {
-      // Two trouser legs, slightly apart, ending in shoes.
-      s += e(w * 0.95, h * 0.39, w * 0.035, h * 0.1, shoe) + e(w * 0.93, h * 0.7, w * 0.035, h * 0.1, shoe);
-      s += p(`M${w * 0.58} ${h * 0.36}L${w * 0.93} ${h * 0.31}L${w * 0.93} ${h * 0.48}L${w * 0.6} ${h * 0.54}z`, L.suit) + p(`M${w * 0.6} ${h * 0.5}L${w * 0.91} ${h * 0.6}L${w * 0.91} ${h * 0.78}L${w * 0.58} ${h * 0.7}z`, L.suit);
-      s += p(`M${w * 0.62} ${h * 0.53}L${w * 0.92} ${h * 0.49}M${w * 0.62} ${h * 0.53}L${w * 0.9} ${h * 0.6}`, "none", `stroke="#00000059" stroke-width="1.2"`);
-      s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.66} ${h * 0.36}L${w * 0.66} ${h * 0.68}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
-      s += l(w * 0.65, h * 0.37, w * 0.65, h * 0.67, "#00000040", 1.2);
+      s += limb([[0.5, 0.45], [0.92, 0.4]], L.suit, h * 0.17, "butt") + limb([[0.5, 0.65], [0.92, 0.71]], L.suit, h * 0.17, "butt");
+      s += e(w * 0.94, h * 0.39, h * 0.06, h * 0.09, shoe) + e(w * 0.94, h * 0.72, h * 0.06, h * 0.09, shoe);
     }
-    s += p(`M${w * 0.3} ${h * 0.36}Q${w * 0.32} ${h * 0.12} ${w * 0.42} ${h * 0.04}`, "none", `stroke="${L.suit}" stroke-width="${h * 0.12}" stroke-linecap="round"`);
-    s += c(w * 0.43, h * 0.04, h * 0.07, skin);
-    if (L.hair === "bald") s += p(`M${hx - hr * 0.95} ${hy - hr * 0.1}Q${hx - hr * 0.6} ${hy - hr * 1.3} ${hx + hr * 0.4} ${hy - hr * 0.95}Q${hx + hr * 0.1} ${hy - hr * 0.5} ${hx - hr * 0.2} ${hy - hr * 0.1}z`, L.hairColor);
-    else if (L.hair === "short") s += p(`M${hx - hr} ${hy}Q${hx - hr} ${hy - hr * 1.2} ${hx + hr * 0.3} ${hy - hr}Q${hx - hr * 0.1} ${hy - hr * 0.3} ${hx - hr * 0.1} ${hy}z`, L.hairColor);
-    else s += p(`M${hx - hr} ${hy + hr * 0.2}Q${hx - hr} ${hy - hr * 1.2} ${hx + hr * 0.4} ${hy - hr}Q${hx - hr * 0.2} ${hy - hr * 0.3} ${hx - hr * 0.2} ${hy + hr * 0.2}z`, L.hairColor);
-    s += dress ? p(`M${w * 0.2} ${h * 0.46}L${w * 0.27} ${h * 0.46}L${w * 0.25} ${h * 0.56}L${w * 0.2} ${h * 0.55}z`, L.shirt) + c(w * 0.24, h * 0.58, 2.4, "#e8e0d0") : r(w * 0.2, h * 0.44, w * 0.05, h * 0.12, L.shirt);
-    s += c(w * 0.44, h * 0.14, 2.2, "#c9a24a");
+    // Arm along the side, under the torso's edge.
+    s += limb([[0.22, 0.76], [0.38, 0.85], [0.5, 0.84]], L.suit, h * 0.12) + c(w * 0.53, h * 0.84, h * 0.06, skin);
+    // Neck, then the torso over it.
+    s += r(n(hx + hr * 0.6), n(cy - hr * 0.4), n(w * 0.2 - hx - hr * 0.4), n(hr * 0.8), skin);
+    s += p(`M${X(0.19)} ${Y(0.38)}Q${X(0.19)} ${Y(0.27)} ${X(0.25)} ${Y(0.27)}L${X(0.5)} ${Y(0.34)}Q${X(0.55)} ${Y(0.55)} ${X(0.5)} ${Y(0.76)}L${X(0.25)} ${Y(0.83)}Q${X(0.19)} ${Y(0.83)} ${X(0.19)} ${Y(0.72)}z`, L.suit);
+    // Collar: shirt and lapels for the men, a lace neckline and brooch for the women.
+    if (dress) s += p(`M${X(0.19)} ${Y(0.44)}Q${X(0.25)} ${Y(0.55)} ${X(0.19)} ${Y(0.66)}z`, L.shirt) + c(w * 0.27, cy, h * 0.045, "#e8e0d0");
+    else {
+      s += p(`M${X(0.19)} ${Y(0.42)}L${X(0.3)} ${n(cy)}L${X(0.19)} ${Y(0.68)}z`, L.shirt) + l(X(0.2), n(cy), X(0.28), n(cy), "#5a1f24", h * 0.05);
+      s += p(`M${X(0.19)} ${Y(0.4)}L${X(0.31)} ${n(cy)}M${X(0.19)} ${Y(0.7)}L${X(0.31)} ${n(cy)}`, "none", `stroke="#00000055" stroke-width="1.2"`);
+    }
+    // The other arm thrown out above the head, the watch on its wrist.
+    s += limb([[0.27, 0.28], [0.3, 0.12], [0.37, 0.1]], L.suit, h * 0.12) + c(w * 0.4, h * 0.1, h * 0.06, skin) + r(n(w * 0.365), n(h * 0.04), 2.4, n(h * 0.12), "#c9a24a", `rx="1"`);
+    // Head: hair at the crown, face turned up.
+    if (L.hair !== "long" && L.hair !== "bald") s += c(hx - hr * 0.28, cy, hr, L.hairColor);
+    if (L.hair === "long") s += c(hx - hr * 0.3, cy, hr * 1.02, L.hairColor);
+    s += c(hx, cy, hr * (L.hair === "bald" ? 1 : 0.9), skin);
+    if (L.hair === "bald") s += p(`M${n(hx - hr * 0.3)} ${n(cy - hr * 0.95)}A${n(hr)} ${n(hr)} 0 0 0 ${n(hx - hr * 0.3)} ${n(cy + hr * 0.95)}`, "none", `stroke="${L.hairColor}" stroke-width="${n(hr * 0.28)}" stroke-linecap="round"`);
+    // Closed eyes: a short curved lid line each, running across the face.
+    for (const ey of [cy - hr * 0.34, cy + hr * 0.34]) s += p(`M${n(hx + hr * 0.22)} ${n(ey - hr * 0.17)}Q${n(hx + hr * 0.34)} ${n(ey)} ${n(hx + hr * 0.22)} ${n(ey + hr * 0.17)}`, "none", `stroke="#5a4038" stroke-width="${n(Math.max(0.8, hr * 0.12))}" stroke-linecap="round"`);
     return s;
   },
 };

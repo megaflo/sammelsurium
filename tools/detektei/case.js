@@ -1,7 +1,7 @@
 // Case library, generator and solver. Pure functions: the same case number gives the same case on every
 // device running the same VERSION. Both devices build the whole case; each role only shows its own side.
 
-export const VERSION = 4;
+export const VERSION = 5;
 const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 // ---------- hashing and randomness ----------
@@ -467,6 +467,12 @@ export const KINDS = {
     parts: [{ id: "pot", label: "Palm pot", r: [0.18, 0.66, 0.64, 0.34], tag: "c", flavor: ["Soil and a few cigarette ends.", "Moss and a lost ping-pong ball."] }],
     hidden: { label: "Deep in the soil", r: [0.3, 0.7, 0.4, 0.14], phrase: "deep in the soil of a large potted palm", found: "deep in the soil of the potted palm" },
   },
+  birdcage: {
+    label: "Birdcage",
+    parts: [{ id: "cage", label: "Birdcage", r: [0.04, 0.02, 0.92, 0.34], tag: "c", flavor: ["A canary, asleep with its head under a wing.", "A canary on its swing, watching you with one bright eye."] }],
+    activity: { part: "cage", act: "feeding the canary", title: "Seed cup", yes: "The seed cup is full of fresh seed and the water dish is topped up. Someone fed the bird tonight.", no: "The seed cup holds nothing but empty husks and the water dish is nearly dry. Nobody has fed the bird since morning." },
+    hidden: { label: "Under the sand tray", r: [0.04, 0.36, 0.92, 0.08], phrase: "under the sand tray of a birdcage", found: "under the sand tray of the birdcage" },
+  },
   sofa: {
     label: "Sofa",
     parts: [{ id: "cushions", label: "Cushions", r: [0.1, 0.3, 0.8, 0.36], tag: "c", flavor: ["A lost earring back. Gold-plated, nothing more.", "Crumbs and a theatre programme."] }],
@@ -507,9 +513,9 @@ export const ROOMS = [
   { id: "music", name: "Music room", theme: "music", body: [150, 204, 126, 44], senses: [{ t: "a piano gleams in the lamplight", k: ["piano"] }, { t: "the brass horn of a gramophone shines", k: ["gramophone"] }],
     furniture: [
     ["piano", 14, 92, 150, 96], ["painting", 192, 24, 74, 56], ["gramophone", 196, 104, 60, 80], ["window", 290, 22, 90, 104], ["sofa", 270, 136, 120, 58]] },
-  { id: "conservatory", name: "Conservatory", theme: "conservatory", body: [146, 206, 130, 42], senses: [{ t: "it smells of wet earth and orchids", k: ["potting", "palm"] }, { t: "palm fronds brush the glass", k: ["palm"] }],
+  { id: "conservatory", name: "Conservatory", theme: "conservatory", body: [146, 206, 130, 42], senses: [{ t: "it smells of wet earth and orchids", k: ["potting", "palm"] }, { t: "palm fronds brush the glass", k: ["palm"] }, { t: "a canary chirps somewhere", k: ["birdcage"] }],
     furniture: [
-    ["potting", 18, 112, 138, 72], ["palm", 176, 52, 74, 136], ["window", 284, 18, 98, 104], ["armchair", 296, 132, 66, 62]] },
+    ["potting", 18, 112, 138, 72], ["palm", 176, 52, 74, 136], ["armchair", 258, 132, 66, 62], ["birdcage", 332, 34, 58, 150]] },
   { id: "billiard", name: "Billiard room", theme: "billiard", body: [16, 206, 110, 42], senses: [{ t: "a lamp hangs low over green baize", k: ["billiard"] }, { t: "it smells of cue chalk and cigar smoke", k: ["cuerack", "billiard"] }],
     furniture: [
     ["cuerack", 18, 36, 42, 128], ["painting", 150, 26, 92, 60], ["billiard", 112, 130, 186, 74], ["sideboard", 314, 104, 76, 80]] },
