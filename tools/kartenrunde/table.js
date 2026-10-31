@@ -41,6 +41,7 @@ let scene = null; // the view on screen, plus the card under the discard top
 let inflight = 0; // > 0 while a message is being played
 let waiting = 0; // messages queued behind the one being played
 let awaiting = false; // an action was sent and its answer has not arrived
+let placeMode = false; // the player chose "Place" for the card in hand (client-side only)
 let dealing = false; // the round is being dealt
 let thinkOn = false; // nothing moved for a moment: the player whose turn it is is thinking
 let thinkTimer = null;
@@ -186,7 +187,10 @@ function build(view) {
   setCard(els.handCard, { up: true, v: 0 });
   els.handBox = h("div", { class: "handbox" }, els.handCard);
   els.handOwner = h("div", { class: "owner" }, "Hand");
-  els.handSlot = h("div", { class: "slot handslot" }, els.handBox, els.handOwner);
+  els.handChoice = h("div", { class: "choice", hidden: true },
+    h("button", { class: "primary", onclick: () => { if (inflight || awaiting) return; placeMode = true; paint(scene); } }, "Place"),
+    h("button", { onclick: () => onPile("discard") }, "Discard"));
+  els.handSlot = h("div", { class: "slot handslot" }, els.handBox, els.handOwner, els.handChoice);
   els.flash = h("div", { class: "flash", role: "status" });
   els.table = h("div", { class: "table" },
     h("div", { class: "slot" }, els.drawPile, els.drawLabel),
@@ -241,6 +245,13 @@ function paint(sc, { freezeSums = false } = {}) {
   const idle = inflight === 0 && !awaiting;
   const thinkingId = thinkOn && v.phase === "play" && !myTurn ? v.players[v.turn].id : null;
   const ended = v.phase === "roundEnd" || v.phase === "gameEnd";
+  // While holding a drawn card the player first chooses Place or Discard; the grid stays inactive until then.
+  // A card taken from the discard pile (or a grid without face-down cards) can only be placed.
+  const mineGrid = v.players[meIdx] ? v.players[meIdx].grid : [];
+  const mayDiscard = v.heldFrom === "draw" && mineGrid.some((c) => c && !c.up);
+  const deciding = myTurn && v.stage === "holding" && v.held !== null && mayDiscard && !placeMode;
+  const placing = myTurn && v.stage === "holding" && v.held !== null && !deciding;
+  if (!(myTurn && v.stage === "holding")) placeMode = false;
 
   // bar
   const closer = v.closer !== null && v.phase === "play" ? v.players[v.closer] : null;
@@ -275,7 +286,7 @@ function paint(sc, { freezeSums = false } = {}) {
         let pick = false;
         if (c && (idle || (v.phase === "setup" && !dealing && !awaiting))) {
           if (v.phase === "setup") pick = !c.up && flipped < 2;
-          else if (myTurn) pick = v.stage === "holding" ? v.held !== null : v.stage === "flip" ? !c.up : false;
+          else if (myTurn) pick = v.stage === "holding" ? v.held !== null && placing : v.stage === "flip" ? !c.up : false;
         }
         cell.card.classList.toggle("pick", pick);
         cell.cell.disabled = !pick;
@@ -286,11 +297,9 @@ function paint(sc, { freezeSums = false } = {}) {
   // table
   const canDraw = myTurn && v.stage === "choose" && idle;
   const canTake = canDraw && v.discardTop !== null;
-  const mineP = v.players[meIdx];
-  const canDiscard = myTurn && idle && v.stage === "holding" && v.heldFrom === "draw" && v.held !== null && mineP.grid.some((c) => c && !c.up);
-  const usable = canTake || canDiscard;
+  const usable = canTake;
   els.drawLabel.replaceChildren(h("b", {}, "Draw"), ` · ${v.drawCount}`);
-  els.discardLabel.replaceChildren(canTake ? h("b", {}, `Take the ${v.discardTop}`) : canDiscard ? h("b", {}, `Discard ${v.held}`) : h("b", {}, "Discard"));
+  els.discardLabel.replaceChildren(canTake ? h("b", {}, `Take the ${v.discardTop}`) : h("b", {}, "Discard"));
   setCard(els.drawTop, v.drawCount ? { up: false } : null);
   setCard(els.discardTop, v.discardTop === null ? null : { up: true, v: v.discardTop });
   setCard(els.discardUnder, v.under === null || v.under === undefined ? null : { up: true, v: v.under });
@@ -301,6 +310,9 @@ function paint(sc, { freezeSums = false } = {}) {
   els.handBox.classList.toggle("theirs", theirs);
   els.handSlot.classList.toggle("theirs", theirs);
   els.handOwner.textContent = holding ? (v.turn === meIdx ? "Your hand" : `${v.players[v.turn].name}'s hand`) : "Hand";
+  els.handChoice.hidden = !(deciding && idle);
+  els.handOwner.hidden = !els.handChoice.hidden;
+  els.handBox.classList.toggle("deciding", deciding && idle);
   els.drawPile.disabled = !canDraw;
   els.drawTop.classList.toggle("pick", canDraw);
   els.discardPile.disabled = !usable;
@@ -317,12 +329,12 @@ function paint(sc, { freezeSums = false } = {}) {
   }
   if (idle || turnKey !== meIdx) lastTurn = turnKey;
 
-  paintDock(v, myTurn, holding, thinkingId);
+  paintDock(v, myTurn, holding, thinkingId, deciding);
   if (sheet && sheet.painted !== sc) paintSheet();
   if (cfg.onPaint) cfg.onPaint(v);
 }
 
-function paintDock(v, myTurn, holding, thinkingId) {
+function paintDock(v, myTurn, holding, thinkingId, deciding) {
   const mine = v.players.find((p) => p.id === me);
   const flipped = mine.grid.filter((c) => c && c.up).length;
   let head = "", sub = "";
@@ -340,8 +352,8 @@ function paintDock(v, myTurn, holding, thinkingId) {
     else if (v.stage === "choose") { head = "Your turn"; sub = v.discardTop === null ? "Draw a card" : `Draw a card or take the ${v.discardTop}`; }
     else if (v.stage === "flip") { head = "Flip a card"; sub = "Tap one of your face-down cards"; }
     else if (holding) {
-      head = `Place the ${v.held}`;
-      sub = v.heldFrom === "draw" ? "on any of your cards, or tap the discard pile" : "on any of your cards";
+      if (deciding) { head = `You drew a ${v.held}`; sub = "Place it on your cards or discard it"; }
+      else { head = `Place the ${v.held}`; sub = "Tap one of your cards to swap it"; }
     } else head = "…";
   } else if (v.phase === "play") {
     ofOther = true;
@@ -700,8 +712,7 @@ function onCell(i) {
 }
 function onPile(a) {
   if (inflight || awaiting) return;
-  // The discard pile takes its top card while choosing and receives the drawn card while holding.
-  send({ a: a === "take" && scene.stage === "holding" ? "discard" : a });
+  send({ a });
 }
 function send(a) {
   awaiting = true;
@@ -718,7 +729,7 @@ export function mountTable(rootEl, view, config) {
   mountGen++;
   applyMotion();
   clearTimeout(thinkTimer);
-  scene = null; inflight = 0; waiting = 0; awaiting = false; dealing = false; thinkOn = false;
+  scene = null; placeMode = false; inflight = 0; waiting = 0; awaiting = false; dealing = false; thinkOn = false;
   sheet = null; announce = null; status = {}; recent = {}; turns = []; lastTurn = null;
   chain = Promise.resolve(); sid = null; seen = 0;
   els = {};
