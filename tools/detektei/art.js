@@ -30,19 +30,26 @@ const THEMES = {
 function backdrop(t) {
   let s = r(0, 0, 400, 175, t.wall);
   if (t.pattern === "stripes") for (let x = 0; x < 400; x += 24) s += r(x, 0, 12, 175, t.wall2);
-  if (t.pattern === "panels") { s += r(0, 120, 400, 55, t.wall2); for (let x = 8; x < 400; x += 56) s += r(x, 128, 44, 40, "none", `stroke="${t.trim}" stroke-opacity=".5"`); }
+  // Wainscot: a chair rail, then raised panels that stop above the skirting board.
+  if (t.pattern === "panels") { s += r(0, 120, 400, 55, t.wall2) + r(0, 118, 400, 3, t.trim, `opacity=".7"`); for (let x = 6; x < 400; x += 56) s += r(x, 127, 44, 32, "none", `stroke="${t.trim}" stroke-opacity=".5"`); }
   if (t.pattern === "damask") for (let y = 14; y < 170; y += 30) for (let x = (y / 30) % 2 ? 0 : 20; x < 410; x += 40) s += p(`M${x} ${y - 7}l5 7-5 7-5-7z`, t.wall2);
   if (t.pattern === "dots") for (let y = 10; y < 170; y += 20) for (let x = (y / 20) % 2 ? 0 : 10; x < 410; x += 20) s += c(x, y, 2, t.wall2);
   if (t.pattern === "tiles") { for (let y = 0; y < 175; y += 16) s += l(0, y, 400, y, t.wall2, 1); for (let y = 0; y < 175; y += 16) for (let x = (y / 16) % 2 ? 0 : 12; x < 400; x += 24) s += l(x, y, x, y + 16, t.wall2, 1); }
   if (t.pattern === "bricks") for (let y = 0; y < 175; y += 14) for (let x = (y / 14) % 2 ? -14 : 0; x < 400; x += 28) s += r(x + 1, y + 1, 26, 12, t.wall2, `rx="2"`);
   if (t.pattern === "glass") {
-    s += r(0, 0, 400, 175, "#1a2c3d");
-    for (let x = 0; x <= 400; x += 50) s += r(x - 2, 0, 4, 175, t.trim);
-    for (let y = 0; y <= 175; y += 44) s += r(0, y - 2, 400, 4, t.trim);
-    for (let i = 0; i < 40; i++) { const x = (i * 97) % 400, y = (i * 53) % 170; s += l(x, y, x - 4, y + 12, "#6d8aa6", 1, `opacity=".35"`); }
-    s += c(330, 30, 12, "#e9e4c8", `opacity=".6"`);
+    // A lean-to: glazing on the left on a low brick wall, the cream house wall (with the window) on the right.
+    s += r(0, 0, 268, 175, "#1a2c3d");
+    s += c(120, 30, 12, "#e9e4c8", `opacity=".6"`);
+    for (let i = 0; i < 30; i++) { const x = (i * 97) % 268, y = (i * 53) % 140; s += l(x, y, x - 4, y + 12, "#6d8aa6", 1, `opacity=".35"`); }
+    for (let i = 0; i < 5; i++) s += r(i * 53 - 2, 0, 4, 175, t.trim);
+    for (let y = 0; y < 140; y += 44) s += r(0, y - 2, 268, 4, t.trim);
+    s += r(0, 136, 268, 6, t.trim);
+    s += r(0, 142, 268, 33, "#4e3a30");
+    for (let y = 142; y < 175; y += 11) for (let x = (y - 142) / 11 % 2 ? -11 : 0; x < 268; x += 22) s += r(x + 1, y + 1, 20, 9, "#7a4a36", `rx="1"`);
+    s += r(268, 0, 132, 175, t.wall2) + r(268, 164, 132, 11, t.floor2) + r(262, 0, 10, 175, t.trim) + r(258, 0, 18, 6, t.trim);
   }
-  if (t.pattern !== "glass" && t.pattern !== "bricks" && t.pattern !== "tiles") s += r(0, 150, 400, 25, t.trim, `opacity=".55"`);
+  if (t.pattern === "panels") s += r(0, 163, 400, 12, t.trim, `opacity=".55"`);
+  else if (t.pattern !== "glass" && t.pattern !== "bricks" && t.pattern !== "tiles") s += r(0, 150, 400, 25, t.trim, `opacity=".55"`);
   s += r(0, 172, 400, 6, t.trim);
   // floor
   s += r(0, 175, 400, 85, t.floor);
@@ -88,9 +95,14 @@ const F = {
   },
   fireplace(w, h, t) {
     let s = r(w * 0.05, h * 0.14, w * 0.9, h * 0.86, "#8a8073") + r(0, 0, w, h * 0.16, t.wood) + r(-3, h * 0.12, w + 6, h * 0.05, t.wood2);
+    // stone courses on the surround
+    for (let i = 1; i < 6; i++) { const y = h * (0.14 + i * 0.143); s += l(w * 0.05, y, w * 0.95, y, "#00000018", 1); for (let k = 0; k < 4; k++) { const x = w * (0.05 + (k + (i % 2 ? 0.5 : 0)) * 0.225); if (x > w * 0.06 && x < w * 0.94) s += l(x, y - h * 0.143, x, y, "#00000018", 1); } }
     s += p(`M${w * 0.22} ${h}V${h * 0.48}Q${w * 0.5} ${h * 0.28} ${w * 0.78} ${h * 0.48}V${h}z`, "#151110");
+    // a dying fire: glowing embers under two logs, behind the grate
+    s += e(w * 0.5, h * 0.9, w * 0.2, h * 0.07, "#e0782a", `opacity=".25"`) + e(w * 0.5, h * 0.9, w * 0.13, h * 0.03, "#d8642a", `opacity=".8"`);
+    s += r(w * 0.34, h * 0.84, w * 0.3, h * 0.05, "#3a2416", `rx="2"`) + r(w * 0.4, h * 0.8, w * 0.26, h * 0.05, "#4a2e1a", `rx="2" transform="rotate(-6 ${w * 0.53} ${h * 0.82})"`);
     for (let i = 0; i < 5; i++) s += l(w * (0.3 + i * 0.1), h * 0.78, w * (0.3 + i * 0.1), h * 0.95, "#3a3632", 2);
-    s += e(w * 0.5, h * 0.92, w * 0.18, 3, "#4a3a30");
+    s += e(w * 0.5, h * 0.95, w * 0.2, 2.5, "#4a3a30");
     s += r(w * 0.15, -h * 0.1, 10, h * 0.1, "#d8d0c0") + c(w * 0.15 + 5, -h * 0.1 - 2, 1.5, "#f2c14a");
     s += r(w * 0.78, -h * 0.12, 12, h * 0.12, "#c9a24a", `rx="2"`) + c(w * 0.78 + 6, -h * 0.06, 3.5, "#f4ead2");
     return s;
@@ -99,7 +111,7 @@ const F = {
     const col = t.chair || "#7a2f2a";
     let s = p(`M${w * 0.14} ${h * 0.6}V${h * 0.12}Q${w * 0.5} ${-h * 0.06} ${w * 0.86} ${h * 0.12}V${h * 0.6}z`, col);
     s += r(0, h * 0.34, w * 0.2, h * 0.46, col, `rx="6"`) + r(w * 0.8, h * 0.34, w * 0.2, h * 0.46, col, `rx="6"`);
-    s += r(w * 0.12, h * 0.42, w * 0.76, h * 0.26, "#00000033", `rx="4"`) + r(w * 0.12, h * 0.38, w * 0.76, h * 0.22, col, `rx="4"`);
+    s += r(w * 0.12, h * 0.38, w * 0.76, h * 0.34, col, `rx="4"`) + r(w * 0.12, h * 0.38, w * 0.76, h * 0.06, "#ffffff14", `rx="3"`) + r(w * 0.12, h * 0.67, w * 0.76, h * 0.03, "#00000026");
     s += r(w * 0.08, h * 0.7, w * 0.84, h * 0.14, col) + r(w * 0.1, h * 0.84, 5, h * 0.16, t.wood2) + r(w * 0.9 - 5, h * 0.84, 5, h * 0.16, t.wood2);
     return s;
   },
@@ -148,16 +160,27 @@ const F = {
     return s;
   },
   wardrobe(w, h, t) {
+    // Both doors stand open: a coat on the rail on the left, shelves with a hatbox and linen on the right.
     let s = r(0, 0, w, h, t.wood) + r(-3, 0, w + 6, h * 0.04, t.wood2);
-    s += r(w * 0.04, h * 0.04, w * 0.46, h * 0.78, "#1a120c");
-    s += l(w * 0.27, h * 0.06, w * 0.27, h * 0.24, "#999", 1) + p(`M${w * 0.12} ${h * 0.26}L${w * 0.27} ${h * 0.22}L${w * 0.42} ${h * 0.26}L${w * 0.46} ${h * 0.78}H${w * 0.08}z`, "#4a4e5a");
-    s += l(w * 0.27, h * 0.26, w * 0.27, h * 0.78, "#363a44", 1) + c(w * 0.27, h * 0.4, 1.5, "#222") + c(w * 0.27, h * 0.5, 1.5, "#222");
+    s += r(w * 0.04, h * 0.04, w * 0.92, h * 0.78, "#1a120c") + r(w * 0.485, h * 0.04, w * 0.03, h * 0.78, t.wood);
+    // hat shelf across the top
+    s += r(w * 0.04, h * 0.2, w * 0.92, h * 0.02, t.wood);
+    s += r(w * 0.12, h * 0.1, w * 0.12, h * 0.09, "#1c1c22") + r(w * 0.08, h * 0.185, w * 0.2, h * 0.015, "#1c1c22") + r(w * 0.12, h * 0.16, w * 0.12, h * 0.012, "#5a2a2a");
+    s += r(w * 0.58, h * 0.15, w * 0.3, h * 0.05, "#6a5a7a", `rx="1"`) + r(w * 0.6, h * 0.12, w * 0.26, h * 0.03, "#8a7a5a", `rx="1"`);
+    // coat on the rail
+    s += l(w * 0.06, h * 0.235, w * 0.47, h * 0.235, "#8a8d92", 1.5) + l(w * 0.27, h * 0.235, w * 0.27, h * 0.26, "#999", 1);
+    s += p(`M${w * 0.12} ${h * 0.29}L${w * 0.27} ${h * 0.25}L${w * 0.42} ${h * 0.29}L${w * 0.46} ${h * 0.79}H${w * 0.08}z`, "#4a4e5a");
+    s += l(w * 0.27, h * 0.29, w * 0.27, h * 0.79, "#363a44", 1) + p(`M${w * 0.21} ${h * 0.27}L${w * 0.27} ${h * 0.36}L${w * 0.33} ${h * 0.27}`, "none", `stroke="#363a44" stroke-width="1.2"`);
+    s += c(w * 0.27, h * 0.42, 1.5, "#222") + c(w * 0.27, h * 0.5, 1.5, "#222");
     s += r(w * 0.12, h * 0.6, w * 0.12, 2, "#363a44") + r(w * 0.3, h * 0.6, w * 0.12, 2, "#363a44");
+    // right side: hatbox on a shelf, linen below
+    s += r(w * 0.515, h * 0.44, w * 0.445, h * 0.02, t.wood);
+    s += r(w * 0.6, h * 0.28, w * 0.3, h * 0.16, "#a8763e", `rx="2"`) + r(w * 0.6, h * 0.33, w * 0.3, h * 0.025, "#7a3a4a") + e(w * 0.75, h * 0.28, w * 0.15, h * 0.015, "#c08a4e");
+    s += r(w * 0.58, h * 0.62, w * 0.32, h * 0.06, "#e9e1cc", `rx="1"`) + r(w * 0.6, h * 0.68, w * 0.3, h * 0.06, "#cfc6ae", `rx="1"`) + r(w * 0.58, h * 0.74, w * 0.32, h * 0.08, "#e9e1cc", `rx="1"`);
+    // open doors, seen edge-on
     s += p(`M${w * 0.04} ${h * 0.04}L${-w * 0.16} ${h * 0.08}V${h * 0.78}L${w * 0.04} ${h * 0.82}z`, t.wood2);
-    s += r(w * 0.5, h * 0.04, w * 0.46, h * 0.78, t.wood2, `opacity=".45"`) + r(w * 0.56, h * 0.1, w * 0.34, h * 0.66, "none", `stroke="${t.wood2}" stroke-width="2"`);
-    s += c(w * 0.54, h * 0.44, 2, "#d8b45a");
+    s += p(`M${w * 0.96} ${h * 0.04}L${w * 1.16} ${h * 0.08}V${h * 0.78}L${w * 0.96} ${h * 0.82}z`, t.wood2);
     s += r(w * 0.04, h * 0.84, w * 0.92, h * 0.13, t.wood2, `opacity=".6"`) + c(w / 2, h * 0.905, 2, "#d8b45a");
-    s += r(w * 0.08, h * 0.05, w * 0.18, h * 0.1, "#a8763e", `rx="2"`);
     return s;
   },
   bed(w, h, t) {
@@ -190,12 +213,14 @@ const F = {
   table(w, h, t) {
     let s = p(`M${w * 0.04} 0H${w * 0.96}L${w} ${h * 0.2}H0z`, t.wood) + r(0, h * 0.2, w, h * 0.1, t.wood2);
     s += r(w * 0.04, h * 0.3, 6, h * 0.7, t.wood2) + r(w * 0.96 - 6, h * 0.3, 6, h * 0.7, t.wood2) + r(w * 0.22, h * 0.3, 5, h * 0.6, t.wood2, `opacity=".7"`) + r(w * 0.78 - 5, h * 0.3, 5, h * 0.6, t.wood2, `opacity=".7"`);
+    s += r(w * 0.31, h * 0.215, w * 0.38, h * 0.07, t.wood, `opacity=".55"`) + c(w * 0.5, h * 0.25, 1.4, "#d8b45a");
     s += e(w * 0.5, h * 0.08, w * 0.08, h * 0.05, "#c0c0c8") + c(w * 0.48, h * 0.04, 3, "#b33a2a") + c(w * 0.53, h * 0.04, 3, "#d8a83a");
     return s;
   },
-  stove(w, h) {
+  stove(w, h, t, rnd, f) {
     let s = r(0, h * 0.18, w, h * 0.82, "#24262a") + r(-3, h * 0.12, w + 6, h * 0.08, "#3a3d42");
-    s += r(w * 0.8, -h * 0.6, w * 0.1, h * 0.72, "#2b2d31");
+    const top = f ? -f.y : -h * 0.6;
+    s += r(w * 0.8, top, w * 0.1, h * 0.12 - top, "#2b2d31") + r(w * 0.78, h * 0.02, w * 0.14, 4, "#3a3d42") + r(w * 0.78, top + 30, w * 0.14, 3, "#3a3d42");
     s += r(w * 0.08, h * 0.3, w * 0.5, h * 0.42, "#33363b") + r(w * 0.12, h * 0.34, w * 0.42, h * 0.34, "none", `stroke="#8a8d92" stroke-width="1.5"`) + r(w * 0.25, h * 0.48, w * 0.16, 3, "#b8bcc2");
     s += r(w * 0.62, h * 0.3, w * 0.32, h * 0.4, "#33363b") + c(w * 0.78, h * 0.5, 4, "#b8bcc2");
     s += r(w * 0.62, h * 0.76, w * 0.32, h * 0.2, "#1a1b1e") + l(w * 0.66, h * 0.86, w * 0.9, h * 0.86, "#555", 1);
@@ -205,10 +230,9 @@ const F = {
   },
   pantry(w, h, t) {
     let s = r(0, 0, w, h, t.wood2) + r(3, 3, w - 6, h - 6, "#3a2a1c");
-    for (let i = 1; i < 3; i++) s += r(3, h * 0.16 * i + h * 0.02, w - 6, 3, t.wood);
+    for (let i = 1; i < 4; i++) s += r(3, h * 0.16 * i, w - 6, 3, t.wood);
     const jar = ["#b33a2a", "#d8a83a", "#6b8a3a", "#8a3a6b", "#c96a2a"];
     for (let row = 0; row < 3; row++) for (let i = 0; i < 5; i++) s += r(w * 0.08 + i * w * 0.17, h * (0.06 + row * 0.16), w * 0.12, h * 0.1, jar[(i + row) % 5], `rx="2" opacity=".85"`) + r(w * 0.08 + i * w * 0.17, h * (0.05 + row * 0.16), w * 0.12, h * 0.025, "#d8d2c0");
-    s += r(3, h * 0.56, w - 6, 3, t.wood);
     s += r(w * 0.1, h * 0.64, w * 0.48, h * 0.32, "#c8c2b0", `rx="3"`) + r(w * 0.1, h * 0.64, w * 0.48, h * 0.05, "#a8a290") + `<text x="${w * 0.34}" y="${h * 0.84}" font-size="${w * 0.1}" text-anchor="middle" fill="#6a6252" font-family="serif">FLOUR</text>`;
     s += p(`M${w * 0.64} ${h * 0.96}q-2-${h * 0.2} ${w * 0.14}-${h * 0.26}q${w * 0.16} ${h * 0.06} ${w * 0.14} ${h * 0.26}z`, "#b39a6a");
     return s;
@@ -221,7 +245,8 @@ const F = {
       s += c(cx, cy, Math.min(cw, rh) * 0.4, "#121a10") + c(cx, cy, Math.min(cw, rh) * 0.18, (i + j) % 3 ? "#2d3b22" : "#4a1a22");
     }
     for (let i = 0; i <= cols; i++) s += l(i * cw, 0, i * cw, h * 0.76, t.wood, 2);
-    s += r(0, h * 0.76, w, h * 0.24, "#00000030");
+    s += r(0, h * 0.76, w, h * 0.03, t.wood) + r(4, h * 0.79, w - 8, h * 0.21, "#0000004d");
+    s += r(0, h * 0.76, 5, h * 0.24, t.wood) + r(w - 5, h * 0.76, 5, h * 0.24, t.wood) + r(w / 2 - 2.5, h * 0.76, 5, h * 0.24, t.wood);
     return s;
   },
   barrel(w, h, t) {
@@ -235,7 +260,7 @@ const F = {
     let s = p(`M${w * 0.06} 0H${w * 0.94}L${w} ${h * 0.42}H0z`, "#5b3a1f") + p(`M${w * 0.09} ${h * 0.04}H${w * 0.91}L${w * 0.96} ${h * 0.38}H${w * 0.04}z`, "#1f6b3a");
     s += r(0, h * 0.42, w, h * 0.16, "#4a2e18");
     for (const x of [0.05, 0.5, 0.95]) s += c(w * x, h * 0.44, 3.5, "#111");
-    s += r(w * 0.06, h * 0.58, 9, h * 0.42, "#3d2512") + r(w * 0.94 - 9, h * 0.58, 9, h * 0.42, "#3d2512") + r(w * 0.47, h * 0.58, 10, h * 0.38, "#3d2512");
+    s += r(w * 0.06, h * 0.58, 9, h * 0.42, "#3d2512") + r(w * 0.94 - 9, h * 0.58, 9, h * 0.42, "#3d2512") + r(w / 2 - 5, h * 0.58, 10, h * 0.42, "#3d2512");
     const cx = w * 0.62, cy = h * 0.2;
     [[0, 0], [5, -3], [5, 3], [10, -6], [10, 0], [10, 6]].forEach(([dx, dy], i) => { s += c(cx + dx, cy + dy * 0.6, 2.6, ["#c92a2a", "#d8a83a", "#2a5ac9", "#6b2a8a", "#c96a2a", "#111"][i]); });
     s += c(w * 0.3, h * 0.24, 2.6, "#f4efe2");
@@ -256,9 +281,15 @@ const F = {
   palm(w, h) {
     let s = "";
     const fr = [[-0.45, 0.18], [-0.3, 0.02], [0, -0.04], [0.3, 0.04], [0.45, 0.2], [-0.2, 0.3], [0.2, 0.32]];
-    for (const [dx, dy] of fr) s += p(`M${w / 2} ${h * 0.62}Q${w * (0.5 + dx * 0.6)} ${h * (dy + 0.1)} ${w * (0.5 + dx)} ${h * (dy + 0.24)}Q${w * (0.5 + dx * 0.5)} ${h * (dy + 0.24)} ${w / 2} ${h * 0.62}z`, "#3f7a3a", `stroke="#2a5a28" stroke-width="1"`);
-    s += l(w / 2, h * 0.4, w / 2, h * 0.66, "#5a4228", 3);
+    const bx = w / 2, by = h * 0.62;
+    for (const [dx, dy] of fr) {
+      // Each frond arches up from the pot and tapers to its tip.
+      const tx = w * (0.5 + dx), ty = h * (dy + 0.24), len = Math.hypot(tx - bx, ty - by), nx = (by - ty) / len, ny = (tx - bx) / len;
+      const mx = (bx + tx) / 2, my = (by + ty) / 2 - len * 0.18, side = dx < 0 ? -1 : 1;
+      s += p(`M${n(bx)} ${n(by)}Q${n(mx + nx * len * 0.16 * side)} ${n(my + ny * len * 0.16 * side)} ${n(tx)} ${n(ty)}Q${n(mx - nx * len * 0.04 * side)} ${n(my - ny * len * 0.04 * side)} ${n(bx)} ${n(by)}z`, "#3f7a3a", `stroke="#2a5a28" stroke-width="1"`);
+    }
     s += p(`M${w * 0.16} ${h * 0.66}H${w * 0.84}L${w * 0.76} ${h}H${w * 0.24}z`, "#a8582e") + r(w * 0.13, h * 0.64, w * 0.74, h * 0.05, "#8a4422");
+    s += e(w / 2, h * 0.645, w * 0.33, h * 0.016, "#3a2a1c") + l(w / 2, h * 0.58, w / 2, h * 0.645, "#5a4228", 3);
     return s;
   },
   sofa(w, h, t) {
@@ -275,7 +306,9 @@ const F = {
   },
   chest(w, h, t) {
     let s = p(`M0 ${h * 0.3}Q${w / 2} ${-h * 0.05} ${w} ${h * 0.3}z`, t.wood2) + r(0, h * 0.3, w, h * 0.7, t.wood);
-    s += r(w * 0.2, 0, 5, h, "#3a3a3a", `opacity=".8"`) + r(w * 0.8 - 5, 0, 5, h, "#3a3a3a", `opacity=".8"`) + r(w * 0.44, h * 0.34, w * 0.12, h * 0.16, "#c9a24a");
+    const lid = (x) => { const u = x / w; return h * ((1 - u) * (1 - u) * 0.3 - 2 * u * (1 - u) * 0.05 + u * u * 0.3); };
+    for (const x0 of [w * 0.2, w * 0.8 - 5]) s += p(`M${n(x0)} ${n(lid(x0))}L${n(x0 + 5)} ${n(lid(x0 + 5))}V${h}H${n(x0)}z`, "#3a3a3a", `opacity=".8"`);
+    s += l(0, h * 0.3, w, h * 0.3, "#00000055", 1.5) + r(w * 0.44, h * 0.26, w * 0.12, h * 0.2, "#c9a24a", `rx="1"`) + c(w / 2, h * 0.34, 1.6, "#2a1a10") + r(w / 2 - 0.6, h * 0.34, 1.2, h * 0.06, "#2a1a10");
     return s;
   },
   sidetable(w, h, t) {
@@ -293,8 +326,21 @@ const F = {
     if (L.hair === "long") s += p(`M${hx + hr * 0.3} ${hy - hr * 1.1}Q${hx - hr * 2.4} ${hy - hr * 0.8} ${hx - hr * 2.1} ${hy + hr * 0.9}Q${hx - hr * 0.6} ${hy + hr * 1.3} ${hx + hr * 0.4} ${hy + hr * 0.9}z`, L.hairColor);
     // Head first, so the shoulders overlap it and it stays attached to the body.
     s += c(hx, hy, hr, skin);
-    s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.98} ${h * (dress ? 0.3 : 0.44)}L${w * 0.98} ${h * (dress ? 0.78 : 0.62)}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
-    s += p(`M${w * 0.6} ${h * 0.52}L${w * 0.98} ${h * 0.5}`, "none", `stroke="#00000055" stroke-width="2"`);
+    const shoe = "#1a1412";
+    if (dress) {
+      // Stockinged legs and shoes show below a flared skirt.
+      s += l(w * 0.8, h * 0.42, w * 0.93, h * 0.4, "#c9ad98", h * 0.08, `stroke-linecap="round"`) + l(w * 0.8, h * 0.6, w * 0.92, h * 0.66, "#c9ad98", h * 0.08, `stroke-linecap="round"`);
+      s += e(w * 0.95, h * 0.4, w * 0.03, h * 0.07, shoe) + e(w * 0.94, h * 0.67, w * 0.03, h * 0.07, shoe);
+      s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.86} ${h * 0.24}L${w * 0.88} ${h * 0.8}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
+      s += p(`M${w * 0.62} ${h * 0.52}L${w * 0.87} ${h * 0.5}`, "none", `stroke="#00000040" stroke-width="1.5"`);
+    } else {
+      // Two trouser legs, slightly apart, ending in shoes.
+      s += e(w * 0.95, h * 0.39, w * 0.035, h * 0.1, shoe) + e(w * 0.93, h * 0.7, w * 0.035, h * 0.1, shoe);
+      s += p(`M${w * 0.58} ${h * 0.36}L${w * 0.93} ${h * 0.31}L${w * 0.93} ${h * 0.48}L${w * 0.6} ${h * 0.54}z`, L.suit) + p(`M${w * 0.6} ${h * 0.5}L${w * 0.91} ${h * 0.6}L${w * 0.91} ${h * 0.78}L${w * 0.58} ${h * 0.7}z`, L.suit);
+      s += p(`M${w * 0.62} ${h * 0.53}L${w * 0.92} ${h * 0.49}M${w * 0.62} ${h * 0.53}L${w * 0.9} ${h * 0.6}`, "none", `stroke="#00000059" stroke-width="1.2"`);
+      s += p(`M${w * 0.18} ${h * 0.5}Q${w * 0.3} ${h * 0.28} ${w * 0.6} ${h * 0.34}L${w * 0.66} ${h * 0.36}L${w * 0.66} ${h * 0.68}L${w * 0.6} ${h * 0.7}Q${w * 0.3} ${h * 0.76} ${w * 0.18} ${h * 0.58}z`, L.suit);
+      s += l(w * 0.65, h * 0.37, w * 0.65, h * 0.67, "#00000040", 1.2);
+    }
     s += p(`M${w * 0.3} ${h * 0.36}Q${w * 0.32} ${h * 0.12} ${w * 0.42} ${h * 0.04}`, "none", `stroke="${L.suit}" stroke-width="${h * 0.12}" stroke-linecap="round"`);
     s += c(w * 0.43, h * 0.04, h * 0.07, skin);
     if (L.hair === "bald") s += p(`M${hx - hr * 0.95} ${hy - hr * 0.1}Q${hx - hr * 0.6} ${hy - hr * 1.3} ${hx + hr * 0.4} ${hy - hr * 0.95}Q${hx + hr * 0.1} ${hy - hr * 0.5} ${hx - hr * 0.2} ${hy - hr * 0.1}z`, L.hairColor);
@@ -336,10 +382,10 @@ export function portrait(look, o = {}) {
   if (look.hair === "bob") s += p("M34 62Q32 30 60 28Q88 30 86 62L88 90H32z", hc);
   if (look.hair === "braid") s += p("M80 70Q92 92 86 118", "none", `stroke="${hc}" stroke-width="9" stroke-linecap="round" stroke-dasharray="6 2"`);
   // body and outfit
-  s += r(52, 82, 16, 22, sk) + r(52, 92, 16, 8, shade);
+  s += r(52, 82, 16, 22, sk) + r(52, 82, 16, 9, shade);
   const torso = "M8 140Q12 108 40 102Q60 110 80 102Q108 108 112 140z";
   if (look.outfit === "uniform") {
-    s += p(torso, col) + p("M30 104h-14l-2 5h18z", ac) + p("M90 104h14l2 5h-18z", ac);
+    s += p(torso, col) + p("M17 113L33 104L35 108L20 117z", ac) + p("M103 113L87 104L85 108L100 117z", ac);
     s += p("M52 102L60 116L68 102", "none", `stroke="#2d3a22" stroke-width="3"`);
     s += c(60, 118, 2.4, ac) + (lost ? r(58, 125, 4, 1, "#2d3a22") : c(60, 126, 2.4, ac)) + c(60, 134, 2.4, ac);
   } else if (look.outfit === "dress") {
@@ -360,7 +406,7 @@ export function portrait(look, o = {}) {
     s += (lost ? r(58, 116, 4, 1, "#8a4418") : c(60, 117, 2.2, ac)) + c(60, 126, 2.2, ac) + c(60, 135, 2.2, ac);
     s += c(42, 128, 2, "#3a7ac9", `opacity=".7"`) + c(78, 120, 1.6, "#e8c23a", `opacity=".8"`);
   } else if (look.outfit === "cardigan") {
-    s += p(torso, col) + p("M50 102L60 114L70 102z", ac) + p("M50 102L60 140", "none", `stroke="#00000040" stroke-width="2"`) + c(62, 122, 1.6, "#d8d2c0") + c(62, 132, 1.6, "#d8d2c0");
+    s += p(torso, col) + p("M50 102L60 114L70 102z", ac) + p("M60 114V140", "none", `stroke="#00000040" stroke-width="2"`) + c(63.5, 121, 1.6, "#d8d2c0") + c(63.5, 131, 1.6, "#d8d2c0");
   } else if (look.outfit === "overalls") {
     s += p(torso, "#c9b48a") + p("M40 114H80V140H40z", col) + (lost ? l(80, 114, 76, 104, col, 4) : l(80, 114, 72, 102, col, 4)) + l(40, 114, 48, 102, col, 4);
     s += c(45, 114, 2.2, "#d8b45a") + (lost ? "" : c(75, 114, 2.2, "#d8b45a"));
@@ -426,7 +472,7 @@ const ICONS = {
   letter: r(8, 16, 48, 32, paper) + p("M8 16l24 18 24-18", "none", `stroke="#a89a7a" stroke-width="2"`) + p("M32 40a4 4 0 0 1 6-5a4 4 0 0 1 6 5l-6 6z", "#c9433a"),
   clipping: p("M12 10h40l-3 6 3 6-3 6 3 6-3 6 3 6-3 6 3 6H12z", "#ddd3b8") + r(16, 14, 30, 6, ink) + [26, 31, 36, 41, 46].map((y) => l(16, y, 44, y, "#7a7060", 2)).join("") + e(32, 34, 14, 8, "none", `stroke="#b3261e" stroke-width="2"`),
   paper: p("M14 8h30l6 6v42H14z", paper) + [18, 24, 30, 36, 42].map((y) => l(20, y, 44, y, "#8a7f6a", 1.5)).join(""),
-  matches: r(14, 12, 36, 40, "#1f3a6b", `rx="3"`) + r(14, 36, 36, 16, "#c9433a") + `<text x="32" y="30" font-size="8" text-anchor="middle" fill="${gold}" font-family="serif">BLUE PARROT</text>`,
+  matches: r(14, 12, 36, 40, "#1f3a6b", `rx="3"`) + r(14, 40, 36, 12, "#c9433a") + r(14, 38, 36, 2, gold) + p("M28 30q2-7 8-7q-2 3 0 4q-4 0-5 3z", "#4a8ac9") + `<text x="32" y="20.5" font-size="6.5" text-anchor="middle" fill="${gold}" font-family="serif" letter-spacing=".3">BLUE</text><text x="32" y="35.5" font-size="6" text-anchor="middle" fill="${gold}" font-family="serif" letter-spacing=".3">PARROT</text>`,
   ticket: p("M8 20h48v8a4 4 0 0 0 0 8v8H8v-8a4 4 0 0 0 0-8z", "#e8d9a8") + l(20, 20, 20, 44, "#8a7a4a", 1, `stroke-dasharray="2 2"`) + `<text x="38" y="35" font-size="8" text-anchor="middle" fill="#6a5a2a" font-family="serif">No. 615</text>`,
   button: c(32, 32, 16, gold, `stroke="#8a6a2a" stroke-width="2"`) + c(27, 28, 2.4, "#6a4a1a") + c(37, 28, 2.4, "#6a4a1a") + c(27, 37, 2.4, "#6a4a1a") + c(37, 37, 2.4, "#6a4a1a"),
   hairpin: p("M16 50L46 14", "none", `stroke="#8a5a2a" stroke-width="5" stroke-linecap="round"`) + p("M22 52L52 18", "none", `stroke="#a8743a" stroke-width="4" stroke-linecap="round"`) + c(48, 15, 5, "#c99a5a"),
@@ -436,8 +482,8 @@ const ICONS = {
   tiepin: r(10, 28, 44, 8, gold, `rx="3"`) + c(46, 32, 4, "#b3261e"),
   handkerchief: p("M12 14l40-4 2 40-40 4z", "#f4efe2", `stroke="#d8cfb8" stroke-width="1.5"`) + c(26, 26, 2.4, "#9a2a22") + c(31, 30, 1.6, "#9a2a22") + c(36, 24, 1.8, "#9a2a22") + `<text x="40" y="48" font-size="10" fill="#4a5a8a" font-family="serif" font-style="italic">A</text>`,
   pills: r(14, 20, 36, 26, "#e8e2d0", `rx="4"`) + r(14, 16, 36, 8, "#c9433a", `rx="3"`) + r(20, 30, 24, 10, paper) + l(22, 35, 42, 35, "#8a7f6a", 1),
-  cigarette: r(8, 30, 40, 7, "#f4efe2", `rx="1"`) + r(36, 30, 4, 7, gold) + r(40, 30, 10, 7, "#d89a5a") + p("M50 30q4-6 0-12q-4-6 2-12", "none", `stroke="#9a9aa2" stroke-width="1.5"`) + c(12, 33, 2, "#c9433a", `opacity=".7"`),
-  glass: p("M18 10h28l-6 28h-16z", "#c8dce8", `opacity=".7" stroke="#8aa2b2"`) + l(32, 38, 32, 52, "#8aa2b2", 2) + p("M22 54h20", "none", `stroke="#8aa2b2" stroke-width="3"`) + p("M40 12l-6 10 5 4", "none", `stroke="#fff" stroke-width="1.5"`),
+  cigarette: r(8, 30, 12, 7, "#d89a5a", `rx="1"`) + r(20, 30, 28, 7, "#f4efe2") + r(19, 30, 2, 7, gold) + r(47, 30, 4, 7, "#8a8580") + r(50, 30, 2, 7, "#e0642a") + c(17, 33.5, 1.4, "#c9433a", `opacity=".7"`) + p("M52 28q4-6 0-11q-4-6 2-11", "none", `stroke="#9a9aa2" stroke-width="1.5"`),
+  glass: p("M18 10h28l-6 28h-16z", "#c8dce8", `opacity=".7" stroke="#8aa2b2"`) + l(32, 38, 32, 52, "#8aa2b2", 2) + p("M22 54h20", "none", `stroke="#8aa2b2" stroke-width="3"`) + p("M39 14l-4 18", "none", `stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".7"`),
   key: c(18, 32, 9, "none", `stroke="${gold}" stroke-width="4"`) + l(27, 32, 54, 32, gold, 4) + l(46, 32, 46, 40, gold, 4) + l(52, 32, 52, 38, gold, 4) + p("M12 22q-4-10 6-12", "none", `stroke="#b3261e" stroke-width="2"`),
   glove: p("M20 56V30l-6-12q0-4 4-2l6 10V10q0-4 4-4t4 4v14V8q0-4 4-4t4 4v16V12q0-4 4-4t4 4v28q0 10-8 16z", "#6a4428"),
   cartridge: r(26, 22, 12, 30, gold, `rx="1"`) + p("M26 22q6-18 12 0z", "#b87a3a") + r(24, 50, 16, 4, "#a8843a"),
@@ -447,13 +493,13 @@ const ICONS = {
   poker: l(14, 54, 46, 10, "#4a4a4e", 4, `stroke-linecap="round"`) + p("M46 10l6-4 2 6-4 2", "none", `stroke="#4a4a4e" stroke-width="3"`) + c(14, 54, 5, gold),
   bookend: p("M14 54V20h14l22 34z", "#d8d2c8", `stroke="#a8a090" stroke-width="2"`) + p("M18 24v26M22 30l8 20", "none", `stroke="#b8b0a2" stroke-width="1"`),
   cane: p("M40 56L26 18Q22 8 32 6Q42 6 40 16", "none", `stroke="#3a2414" stroke-width="5" stroke-linecap="round"`) + c(36, 9, 5, steel),
-  letteropener: p("M10 54L44 20l6-10 4 4-10 6z", steel) + r(8, 50, 12, 6, gold, `transform="rotate(-45 14 53)"`),
+  letteropener: p("M22 42L50 10Q54 8 54 12L28 48z", steel) + p("M50 10L28 46", "none", `stroke="#8a9098" stroke-width="1"`) + p("M18 38l12 12-3 3-12-12z", gold) + p("M17 49l6 6-5 5q-3 1-5-1l-1-2z", "#5a2a1e") + c(13, 57, 2.4, gold),
   knife: p("M8 56l8-8 34-34q6 0 4 6L20 54z", steel) + p("M8 56l8-8 6 6-8 8z", "#3a2414"),
   dagger: p("M32 4l5 34h-10z", steel) + r(20, 38, 24, 5, gold, `rx="2"`) + r(29, 43, 6, 13, "#5a2a1e") + c(32, 58, 3.5, gold),
   arsenic: r(18, 18, 28, 36, "#6a7a5a", `rx="3"`) + r(16, 14, 32, 6, "#4a5a3a", `rx="2"`) + p("M24 30h16v14H24z", paper) + c(32, 36, 4, ink) + l(28, 42, 36, 32, ink, 1.5) + l(28, 32, 36, 42, ink, 1.5),
   drops: p("M26 22h12v6l4 6v20H22V34l4-6z", "#3a6a9a", `opacity=".9"`) + r(27, 12, 10, 10, "#2a2a2a") + r(24, 38, 16, 10, paper),
   cord: p("M10 20Q30 4 40 20T54 40Q40 60 24 46T12 30", "none", `stroke="#c9433a" stroke-width="4" stroke-linecap="round"`) + p("M50 40l6 10-4 2", "#d8b45a"),
-  belt: p("M8 24Q20 12 32 24T56 24", "none", `stroke="#5a3a6b" stroke-width="7" stroke-linecap="round"`) + p("M10 44Q22 32 34 44T56 44", "none", `stroke="#5a3a6b" stroke-width="7" stroke-linecap="round"`),
+  belt: p("M14 22Q26 12 38 22T56 22Q60 34 48 38Q30 42 20 46T10 52", "none", `stroke="#5a3a6b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"`) + [26, 33, 40].map((x) => c(x, 22 - (x === 33 ? 1 : 0), 1, "#2a1a30")).join("") + r(6, 14, 12, 14, "none", `rx="2" stroke="${gold}" stroke-width="2.5"`) + l(12, 16, 12, 26, gold, 2),
   wire: e(32, 32, 16, 12, "none", `stroke="${steel}" stroke-width="1.6"`) + e(32, 32, 12, 9, "none", `stroke="${steel}" stroke-width="1.6"`) + r(6, 28, 4, 10, "#c9a46a") + r(54, 28, 4, 10, "#c9a46a"),
   // ui
   interrogator: r(6, 10, 34, 24, paper, `rx="6"`) + p("M14 34l-2 8 10-8z", paper) + r(24, 26, 34, 22, "#d8b45a", `rx="6"`) + p("M48 48l4 8-10-8z", "#d8b45a") + c(15, 22, 2, ink) + c(23, 22, 2, ink) + c(31, 22, 2, ink),
