@@ -1,4 +1,4 @@
-# Detektei: how a case is built (version 6)
+# Detektei: how a case is built (version 7)
 
 `case.js` builds a whole case from a case number. Both devices run the same code, so both build the same case. The interrogator sees the suspects; the field agent sees the rooms; codes carry clues and hints across.
 

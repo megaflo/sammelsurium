@@ -1,7 +1,7 @@
 // Small helpers shared by the generator: hashing, a seeded random source, text filling and times.
 
 // Bump VERSION whenever a change alters generated cases: both devices must build the same case from a number.
-export const VERSION = 6;
+export const VERSION = 7;
 export const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 // ---------- hashing and randomness ----------

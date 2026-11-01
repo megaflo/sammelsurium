@@ -2,7 +2,7 @@ import { VERSION, codeFor, rn } from "../util.js";
 
 // Hidden spots, goal, the story of what happened, and item codes.
 export function finish(c) {
-  const { M, MR, S, V, W, attempt, cause, chimer, clues, code, content, core, decoy, deductions, dialog, dimOf, f, framed, hints, innocents, locks, lovers, manor, nm, rooms, route, served, server, side, spotWeapon, suspects, time, token, trueAlibi, tryst, victim, watch, weapon } = c;
+  const { M, MR, S, V, W, found, attempt, cause, chimer, clues, code, content, core, decoy, deductions, dialog, dimOf, f, framed, hints, innocents, locks, lovers, manor, nm, rooms, route, served, server, side, spotWeapon, suspects, time, token, trueAlibi, tryst, victim, watch, weapon } = c;
   // ---------- hidden spots ----------
   const hiddenSpots = {};
   for (const h of Object.values(hints)) {
@@ -41,7 +41,7 @@ export function finish(c) {
 
   const kase = { code, version: VERSION, attempt, victim, manor, cause, time, watch, rooms, scene: S.id, murderRoom: MR.id, suspects, weapon: weapon.id, decoy: decoy.id,
     twists: [core, side].filter(Boolean), routes: Object.fromEntries(innocents.map((s) => [s.id, route.get(s) + (dimOf.get(s) ? `:${dimOf.get(s)}` : "")])),
-    clues, hints, content, hiddenSpots, locks, dialog, deductions, solution, goal, story, proof: deductions.filter((d) => d.proof).map((d) => d.why), briefing: briefing(victim, manor, S, suspects, rooms) };
+    clues, hints, content, hiddenSpots, locks, dialog, deductions, solution, goal, story, proof: deductions.filter((d) => d.proof).map((d) => d.why), found, briefing: briefing(victim, manor, S, suspects, found) };
   const used = new Set();
   for (const item of [...Object.values(clues), ...Object.values(hints)]) {
     let salt = 0, c;
@@ -51,8 +51,8 @@ export function finish(c) {
   }
   return kase;
 }
-function briefing(victim, manor, S, suspects, rooms) {
-  return `A storm rages over ${manor}. At eleven, ${victim.name} was found dead in the ${rn(S)}. The doors were locked and the telephone lines are down; nobody has left. ` +
+function briefing(victim, manor, S, suspects, found) {
+  return `A storm rages over ${manor}. At ${found}, ${victim.name} was found dead in the ${rn(S)}. The doors were locked and the telephone lines are down; nobody has left. ` +
     `Three people are still in the house: ${suspects.map((s) => `${s.name} (${s.title.toLowerCase()})`).join(", ")}. ` +
     `The police can't get through before morning. Until then, the case is yours.`;
 }

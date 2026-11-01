@@ -356,3 +356,15 @@ test("every clue lies somewhere the field agent can find it again", () => {
     }
   }
 });
+
+test("the body is found after the time on the watch and after everybody left where they were", () => {
+  for (const k of many) {
+    const found = k.briefing.match(/At (\d+:\d+ [ap]m), /)[1];
+    const late = (t) => (toMin(t) < 12 * 60 ? toMin(t) + 24 * 60 : toMin(t)); // past midnight counts as late
+    assert.ok(late(found) > late(k.watch), `${k.code}: found ${found}, watch ${k.watch}`);
+    for (const s of k.suspects) {
+      const until = answer(k, s, "where").match(/until (\d+:\d+ [ap]m)/)[1];
+      assert.ok(late(found) > late(until), `${k.code}: found ${found}, ${s.id} until ${until}`);
+    }
+  }
+});

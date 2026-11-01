@@ -45,6 +45,9 @@ export function layHouse(c) {
       : core === "poison" ? servedAt - 10 - 5 * R.int(4) : T - 30 - 5 * R.int(5);
     s.until = watchAt + 20 + 5 * R.int(4);
   }
+  // The body is found after everybody left where they were, so after the time the watch shows too: a watch that
+  // reads later than the discovery would give the staged watch away before anyone looks at it.
+  const found = fmtTime(Math.ceil((Math.max(...suspects.map((s) => s.until)) + 5) / 5) * 5);
 
-  Object.assign(c, { MR, S, hideRoom, keyAt, roomOf, roomOfLeaf, rooms, served, time, watch });
+  Object.assign(c, { MR, S, found, hideRoom, keyAt, roomOf, roomOfLeaf, rooms, served, time, watch });
 }
