@@ -396,3 +396,44 @@ button.back { color: #cfd8cf; }
 /* the wide typewriter face makes clue texts long: a smaller picture leaves room for the code on phones */
 .ex-art { width: min(46vw, 28vh, 280px); }
 .ex-body { font-size: clamp(1.05rem, 4vw, 1.4rem); }
+
+/* ---------- evidence: tags in the scene, the tray under it ---------- */
+.evtags { filter: drop-shadow(0 1px 1.5px #000a); }
+.evtag-bg { fill: #fbf7ea; stroke: #6d5d44; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.badge path { stroke-linecap: round; stroke-linejoin: round; }
+.spot .meta { display: inline-flex; align-items: center; gap: 4px; }
+.mini-ev { display: inline-block; width: 1.7em; height: 1.7em; padding: 2px; background: #fbf7ea; border-radius: 4px; box-shadow: 0 0 0 1px #c8b78a; }
+.mini-ev svg { width: 100%; height: 100%; margin: 0; }
+
+/* evidence from this room: brown-paper tags tied with string, pinned under the picture */
+.tray { margin: 12px 2px 4px; }
+.tray-h { margin: 0 0 4px; color: #cfd8cf; font-size: .85rem; letter-spacing: .04em; }
+.tray-h .count, .divider .count { display: inline-block; min-width: 1.5em; padding: 0 6px; border-radius: 99px; background: #0004; text-align: center; font-size: .8rem; }
+.tray ul { list-style: none; margin: 0; padding: 6px 2px 8px; display: flex; gap: 10px; overflow-x: auto; scrollbar-width: thin; }
+.tray li { flex: none; }
+.tray li:nth-child(odd) .evtag { transform: rotate(-1.5deg); }
+.tray li:nth-child(even) .evtag { transform: rotate(1.2deg); }
+.evtag { position: relative; width: 84px; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 6px 6px; text-align: center; background: #d9c08f; border: 1px solid #a88a55; border-radius: 4px 4px 10px 10px; clip-path: polygon(18% 0, 82% 0, 100% 14%, 100% 100%, 0 100%, 0 14%); box-shadow: none; }
+.evtag::before { content: ""; position: absolute; top: 4px; left: 50%; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: #16231d; box-shadow: 0 0 0 2px #f3ead0; }
+.evtag .nart { width: 52px; height: 52px; padding: 4px; border-radius: 6px; }
+.evlabel { font-size: .72rem; line-height: 1.2; color: #2b2117; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+button.evtag:hover:not(:disabled) { border-color: #8b2b22; }
+
+/* ---------- the notebook's clue list: a card index ---------- */
+.nsort { flex: none; display: flex; gap: 4px; margin: 0 0 12px; padding: 0 4px; border-bottom: 2px solid #8b6f3f; overflow-x: auto; scrollbar-width: none; }
+.divtab { flex: none; min-height: 38px; padding: 6px 12px 4px; font: .92rem Georgia, "Times New Roman", serif; background: #d9c99a; border: 1px solid #b9a773; border-bottom: 0; border-radius: 8px 8px 0 0; box-shadow: none; margin-bottom: -2px; }
+.divtab.on { background: #f5edd6; border-color: #8b6f3f; color: #5b1f18; font-weight: 700; padding-bottom: 6px; border-bottom: 2px solid #f5edd6; }
+.ngroup { margin: 0 0 16px; }
+.divider { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 4px 12px; width: fit-content; max-width: 100%; background: #d9c99a; border: 1px solid #b9a773; border-radius: 8px 8px 2px 2px; color: #5b1f18; font-size: 1rem; }
+.divider .face { width: 30px; flex: none; }
+.divider .face svg { border-radius: 5px; }
+.divider .count { background: #0001; }
+.ncards.slim { gap: 8px; }
+.ncard.slim { padding: 8px 10px; gap: 10px; align-items: center; }
+.ncard.slim .nart { width: 48px; height: 48px; padding: 4px; }
+.ncard.slim .ntext { gap: 1px; }
+.ncard.slim strong { font-size: 1rem; }
+.nwhere { font-size: .8rem; color: #8b2b22; }
+.nsnip { font-size: .85rem; color: #6d5d44; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ncard.slim .chip { position: static; flex: none; align-self: flex-start; font-size: .9rem; }
+.ncard.slim strong { padding-right: 0; }

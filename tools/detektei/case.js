@@ -97,15 +97,15 @@ export const SUSPECTS = [
     look: { skin: "#e3b48f", hair: "slick", hairColor: "#5b3a22", outfit: "suit", color: "#7a6440", accent: "#c8b27a", extras: ["tie"], token: "lapel" } },
   { id: "bell", temper: "angry", name: "Mrs. Agatha Bell", short: "Mrs. Bell", surname: "Bell", title: "Cook", tone: "red",
     about: "I've cooked for {V} for fifteen years. Never a word of thanks.", voice: "Well! ",
-    token: { name: "a horn button from an apron strap", icon: "button", missing: "One strap of {n}'s apron hangs loose; its horn button is gone." },
+    token: { name: "a horn button from an apron strap", icon: "hornbutton", missing: "One strap of {n}'s apron hangs loose; its horn button is gone." },
     look: { skin: "#e9b08e", hair: "capped", hairColor: "#b8452a", outfit: "apron", color: "#6f8296", accent: "#f4f1ea", extras: [], token: "strap" } },
   { id: "lark", temper: "afraid", name: "Theo Lark", short: "Theo Lark", surname: "Lark", title: "Portrait painter", tone: "black",
     about: "{V} commissioned a portrait. I've been here a month and painted nothing worth keeping.", voice: "Ah. ",
-    token: { name: "a paint-flecked wooden button", icon: "button", missing: "{n}'s painting smock is missing a wooden button near the top." },
+    token: { name: "a paint-flecked wooden button", icon: "woodbutton", missing: "{n}'s painting smock is missing a wooden button near the top." },
     look: { skin: "#c98f6a", hair: "curly", hairColor: "#1e1a19", outfit: "smock", color: "#c46b2b", accent: "#e8d6a8", extras: ["beret", "scarf"], token: "buttons" } },
   { id: "finch", temper: "afraid", name: "Miss Clara Finch", short: "Miss Finch", surname: "Finch", title: "Private secretary", tone: "red",
     about: "I kept {V}'s diary and letters for six years.", voice: "",
-    token: { name: "a small silver earring", icon: "earring", missing: "{n} has a silver earring in one ear only." },
+    token: { name: "a small silver earring", icon: "silverearring", missing: "{n} has a silver earring in one ear only." },
     look: { skin: "#f3d2bb", hair: "bob", hairColor: "#8e3b1f", outfit: "cardigan", color: "#5f8668", accent: "#efe7d3", extras: ["glasses"], token: "earring", earring: "#c8ccd4" } },
   { id: "vance", temper: "angry", name: "Rupert Vance", short: "Vance", surname: "Vance", title: "Business partner", tone: "brown",
     about: "{V} and I built the company together, thirty years ago.", voice: "Frankly? ",
@@ -133,13 +133,13 @@ export const MOTIVES = [
     settled: { title: "Envelope of negatives", icon: "photo", text: "An envelope of photographic negatives, with a note in {V}'s hand: \"Returned to {who}. We are quits.\"" },
     told: "{V} gave those photographs back to {who} last week. I saw the envelope change hands. That business was over.",
     dinner: "{V} made a joke about photographs at dinner. Nobody laughed, {who} least of all." },
-  { id: "debts", label: "Debts", icon: "ledger",
+  { id: "debts", label: "Debts", icon: "bill",
     doc: "An IOU for four thousand pounds, signed by {who}. {V} has written across it: \"Pay by Monday or I call it in.\"",
     admit: "I owed {V} money. A great deal. {VHe} wasn't the forgiving kind.",
-    settled: { title: "Receipt", icon: "ledger", text: "A receipt in {V}'s hand: \"Received from {who} the sum of four thousand pounds. Paid in full.\" It is dated yesterday." },
+    settled: { title: "Receipt", icon: "bill", text: "A receipt in {V}'s hand: \"Received from {who} the sum of four thousand pounds. Paid in full.\" It is dated yesterday." },
     told: "That IOU was paid off. Every penny, yesterday; {V} crowed about it at tea.",
     dinner: "{V} said at dinner that some people in this house owed {Vhim} money. {who} studied the tablecloth." },
-  { id: "jealousy", label: "Jealousy", icon: "letter",
+  { id: "jealousy", label: "Jealousy", icon: "loveletter",
     doc: "A love letter from {V} to the person {who} hoped to marry. It is dated this week.",
     admit: "{V} took the one person I cared about. Just to prove {Vhe} could.",
     settled: { title: "Note", icon: "letter", text: "A note to {V} from the person {who} hoped to marry: \"Please stop writing to me. I have given my word to {who}, and I mean to keep it.\"" },
@@ -244,21 +244,21 @@ const FINDS = [
   { title: "Pawn ticket", icon: "ticket", where: "scw", text: "A pawn ticket in the name of {X}, for a silver pocket watch, from a shop in Brighton.", react: "Times have been hard. I'll redeem the watch when I can." },
   { title: "Unfinished poem", icon: "paper", where: "scw", text: "An unfinished love poem in {X}'s handwriting. It breaks off mid-rhyme.", react: "Poetry isn't a crime. Bad poetry, perhaps." },
   { title: "Torn photograph", icon: "photo", where: "scw", text: "Half of a photograph: a seaside pier, and {X} holding an ice cream.", react: "Brighton, years ago. I tore it in a temper. I don't even remember why." },
-  { title: "Folded note", icon: "letter", where: "scw", text: "A folded note in {X}'s handwriting: \"After dinner. The usual place. Don't be late.\"", react: "That note is about a game of cards. We play every Saturday. Ask anyone." },
+  { title: "Folded note", icon: "paper", where: "scw", text: "A folded note in {X}'s handwriting: \"After dinner. The usual place. Don't be late.\"", react: "That note is about a game of cards. We play every Saturday. Ask anyone." },
   { title: "Diary page", icon: "paper", where: "scw", text: "A page torn from {V}'s diary: \"Must speak to {X} about the money. This cannot go on.\"", react: "{V} lent me money years ago, and I paid every penny back. Whatever {V} wrote, that matter was closed." },
-  { title: "Telegram", icon: "letter", where: "scw", text: "A telegram to {X}: \"ARRIVING TUESDAY STOP SAY NOTHING TO ANYONE STOP\"", react: "My brother is coming to visit, and the family can't stand him. That's all it is." },
+  { title: "Telegram", icon: "telegram", where: "scw", text: "A telegram to {X}: \"ARRIVING TUESDAY STOP SAY NOTHING TO ANYONE STOP\"", react: "My brother is coming to visit, and the family can't stand him. That's all it is." },
   { title: "Pill box", icon: "pills", where: "sc", text: "An empty pill box from a London chemist, made out to {X}. \"Two at bedtime.\"", react: "Sleeping pills. I haven't slept properly in years. Is that a crime now?" },
-  { title: "Jeweller's bill", icon: "ledger", where: "scw", text: "An unpaid bill from a Bond Street jeweller, made out to {X}: one diamond brooch.", react: "A gift for someone dear to me. I'll pay it when I can." },
-  { title: "Slashed sketch", icon: "paper", where: "scw", text: "A charcoal sketch of {V}, slashed through twice. It is signed with the initial {I}.", react: "I spoiled the drawing and lost my temper with it. With the drawing, mind you." },
+  { title: "Jeweller's bill", icon: "bill", where: "scw", text: "An unpaid bill from a Bond Street jeweller, made out to {X}: one diamond brooch.", react: "A gift for someone dear to me. I'll pay it when I can." },
+  { title: "Slashed sketch", icon: "sketch", where: "scw", text: "A charcoal sketch of {V}, slashed through twice. It is signed with the initial {I}.", react: "I spoiled the drawing and lost my temper with it. With the drawing, mind you." },
   { title: "Brass key", icon: "key", where: "scf", text: "A small brass key on a ribbon, labelled \"Gatehouse\" in {X}'s handwriting.", react: "I borrowed it weeks ago to fetch the deck chairs, and forgot to give it back." },
   { title: "Revolver cartridge", icon: "cartridge", where: "scf", text: "A single unfired revolver cartridge, wrapped in a sheet of {X}'s letter paper.", react: "My father's. I keep it for luck. The revolver went to a museum years ago." },
   { title: "Railway timetable", icon: "paper", where: "scw", text: "A railway timetable with the 11:15 night train circled in red. {X}'s name is written on the cover.", react: "I like to know my way out of a place. An old habit." },
   { title: "Racing slip", icon: "ticket", where: "scw", text: "A betting slip in {X}'s name: ten pounds on Lucky Lad, the 3:30 at Epsom. Lucky Lad came last.", react: "A harmless flutter. A losing one, as you can see." },
-  { title: "Burnt scrap", icon: "clipping", where: "scf", text: "A scrap of burnt paper in {X}'s handwriting. Only a few words are left: \"...will never forgive...\"", react: "A letter to my sister that I thought better of sending. We don't get on." },
-  { title: "Love letter", icon: "letter", where: "scw", text: "A love letter to {X}, unsigned. The handwriting is shaky.", react: "That letter is private, and it has nothing to do with {V}. Put it away." },
+  { title: "Burnt scrap", icon: "scrap", where: "scf", text: "A scrap of burnt paper in {X}'s handwriting. Only a few words are left: \"...will never forgive...\"", react: "A letter to my sister that I thought better of sending. We don't get on." },
+  { title: "Love letter", icon: "loveletter", where: "scw", text: "A love letter to {X}, unsigned. The handwriting is shaky.", react: "That letter is private, and it has nothing to do with {V}. Put it away." },
   { title: "Letter of complaint", icon: "letter", where: "scw", text: "A letter from {X} to {V}, complaining about the draughts in the guest rooms. Three pages long.", react: "The draughts in this house are criminal. That's the only crime I've ever accused anyone of." },
   { title: "Stained handkerchief", icon: "handkerchief", where: "scf", presence: true, text: "A handkerchief embroidered with the letter {I}, with a few spots of dried blood.", react: "A nosebleed, days ago. The damp in this house gives me nosebleeds." },
-  { title: "Spectacle case", icon: "paper", where: "scf", presence: true, text: "An empty spectacle case. The initial {I} is stamped on the lid.", react: "Oh, there it is. I've been looking for that case all week." },
+  { title: "Spectacle case", icon: "speccase", where: "scf", presence: true, text: "An empty spectacle case. The initial {I} is stamped on the lid.", react: "Oh, there it is. I've been looking for that case all week." },
   { title: "Single glove", icon: "glove", where: "scf", presence: true, text: "A single leather driving glove with the initial {I} stamped inside the cuff.", react: "I lost that glove days ago. I've been driving one-handed ever since." },
   { title: "Cigarette end", icon: "cigarette", where: "sf", presence: true, text: "A cigarette end with a gold band: {X}'s brand. Nobody else in the house smokes them.", react: "I smoke where I please. That one's old, as you can see." },
 ];
@@ -823,8 +823,8 @@ function build(code, attempt) {
   if (core === "moved") addClue("stain", { title: "Scrubbed stain", icon: "magnifier", text: "A patch scrubbed almost white, still damp and smelling of carbolic soap. A rusty rim remains in the cracks. Somebody cleaned up here tonight." });
   const shoe = traceVal.shoes && SHOES.find((x) => x.id === traceVal.shoes);
   const smoke = traceVal.smoke && SMOKES.find((x) => x.id === traceVal.smoke);
-  if (shoe) addClue("print", { title: "Footprint", icon: "magnifier", text: `In a smear of spilt ${R.pick(["port", "ash", "soil from an upset plant"])} right beside the body: ${shoe.print}. It is fresh.` });
-  if (smoke) addClue("ash", { title: "Ash", icon: "cigarette", text: `On the floor of the ${rn(S)}, where nobody has swept since the murder: ${smoke.ash}.` });
+  if (shoe) addClue("print", { title: "Footprint", icon: "shoe", text: `In a smear of spilt ${R.pick(["port", "ash", "soil from an upset plant"])} right beside the body: ${shoe.print}. It is fresh.` });
+  if (smoke) addClue("ash", { title: "Ash", icon: "ash", text: `On the floor of the ${rn(S)}, where nobody has swept since the murder: ${smoke.ash}.` });
 
   // ---------- deductions ----------
   // When the murder happened: the watch, unless a twist makes it lie.
@@ -1339,6 +1339,28 @@ export function makeCase(code) {
     if (!validate(k).length) { cache.set(code, k); return k; }
   }
   throw new Error(`No solvable case for ${code}`);
+}
+
+// Where each clue lies: clue id -> { room, at, path }. at is the spot the field agent examines (a leaf, a locked
+// leaf or a hidden place); path holds the labels from the furniture down to that spot. A locked leaf holds two
+// clues: the lock itself and the paper inside.
+export function clueSpots(k) {
+  const out = {};
+  for (const room of k.rooms) {
+    const go = (n, path) => {
+      const here = path.length && path[path.length - 1] === n.label ? path : [...path, n.label];
+      if (n.children && n.children.length) return n.children.forEach((ch) => go(ch, here));
+      const c = k.content[n.id];
+      const ids = !c ? [] : c.lock ? [k.locks[c.lock].lockClue, k.locks[c.lock].clue] : c.clue ? [c.clue] : [];
+      for (const id of ids) out[id] = { room: room.id, at: n.id, path: here };
+    };
+    room.furniture.forEach((f) => go(f, []));
+  }
+  for (const h of Object.values(k.hiddenSpots)) {
+    const f = k.rooms.find((r) => r.id === h.room).furniture.find((x) => x.id === h.furniture);
+    out[h.clue] = { room: h.room, at: h.id, path: [f.label, h.label] };
+  }
+  return out;
 }
 
 // Looks up a code the player typed. Returns { kind: "clue" | "hint", item } or null.
