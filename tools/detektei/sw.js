@@ -1,5 +1,5 @@
 // Caches the game on first visit so it works offline. Bump the version whenever a file changes.
-const CACHE = "detektei-v12";
+const CACHE = "detektei-v13";
 const FILES = ["./", "index.html", "style.css", "app.js", "case.js", "art.js", "util.js", "library.js", "furniture.js",
   ...["index", "answer", "house", "proof", "people", "clues", "placement", "hints", "dialogue", "finish"].map((n) => `build/${n}.js`)];
 

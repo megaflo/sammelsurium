@@ -2,11 +2,17 @@ import { HIDE_ANON, HIDE_SAY, LOCK_RULES } from "../library.js";
 
 // Hints: what the interrogator learns and carries to the field agent.
 export function makeHints(c) {
-  const { M, R, W, chimer, f, finds, glimpse, hidden, locks, nm, noticer, others, roomOf, server, sighting, spotWeapon, suspects, time } = c;
+  const { M, R, W, chimer, clues, f, finds, glimpse, hidden, locks, nm, noticer, others, proofSpot, roomOf, server, sighting, spotWeapon, suspects, time } = c;
   // ---------- hints (the interrogator learns them) ----------
   const hints = {};
   hints.hWeapon = { id: "hWeapon", room: roomOf(spotWeapon).id, spot: spotWeapon.id, clue: "weapon", text: `${nm(W)}: "${sighting}"` };
   for (const lk of Object.values(locks)) hints[lk.hint] = { id: lk.hint, lock: lk.id, text: f(R.pick(LOCK_RULES[lk.type]), { phrase: lk.phrase }) };
+  // Proof of a secret: the liar says where it is once the lie about the alibi breaks.
+  for (const [s, spot] of proofSpot) {
+    const id = `hProof_${s.id}`, clue = `proof_${s.id}`;
+    const say = `On my way back I hid the ${clues[clue].title.toLowerCase()} in ${glimpse(spot)}, ${spot.hiddenDef.phrase}. Go and look, if you don't believe me.`;
+    hints[id] = { id, room: roomOf(spot).id, spot: spot.id, clue, say, text: `${nm(s)}: "${say}"` };
+  }
   const opinionHint = {}; // `${speaker}>${about}` -> hint ids
   // A suspect with nothing to report sometimes reports a sighting all the same, which leads to a red herring. The
   // murderer does so more often than anyone: it sends the detectives the wrong way.

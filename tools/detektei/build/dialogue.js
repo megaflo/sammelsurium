@@ -1,9 +1,9 @@
-import { ALONE, BODY_REACT, EVENING, NOTICED, NOT_SEEN, OTHERS_PAPER, RELATIONS, SEEN, SHOES, SHRUG, SMOKES, STAIN_REACT, TRACE_REACT, WEAPON_REACT } from "../library.js";
+import { ALONE, BODY_REACT, EVENING, NOTICED, NOT_SEEN, OTHERS_PAPER, PROOF_NUDGE, PROOF_OWN, PROOF_SEEN, RELATIONS, SEEN, SHOES, SHRUG, SMOKES, STAIN_REACT, TRACE_REACT, WEAPON_REACT } from "../library.js";
 import { an, cap, fill, fmtTime, rn } from "../util.js";
 
 // Dialogue: questions, confrontations and observations for each suspect.
 export function writeDialogue(c) {
-  const { M, MR, R, S, V, W, chimer, clues, core, corroborator, decoy, dims, f, finds, framed, hints, keyAt, locks, lovers, nm, noticedHint, noticer, opinionHint, others, presence, refuter, served, server, sighting, suspects, there, time, token, tryst, watch } = c;
+  const { M, MR, R, S, V, W, chimer, clues, core, corroborator, proofSpot, route, decoy, dims, f, finds, framed, hints, keyAt, locks, lovers, nm, noticedHint, noticer, opinionHint, others, presence, refuter, served, server, sighting, suspects, there, time, token, tryst, watch } = c;
   // ---------- dialogue ----------
   // requires: tokens the interrogator must hold. clue:x = clue code entered, q:sid:qid = question asked, ev:x = event,
   // o:sid:dim = something seen when looking closely. Lines depend on facts, never on the part a suspect plays.
@@ -11,7 +11,7 @@ export function writeDialogue(c) {
   const evening = R.shuffle(EVENING), noticed = R.shuffle(NOTICED);
   const chime = `I heard a cry from the direction of the ${rn(MR)}, just as the hall clock chimed. ${time}, it must have been.`;
   const relation = {};
-  for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) relation[`${suspects[i].id}|${suspects[j].id}`] = R.pick(RELATIONS);
+  for (let i = 0; i < suspects.length; i++) for (let j = i + 1; j < suspects.length; j++) relation[`${suspects[i].id}|${suspects[j].id}`] = R.pick(RELATIONS);
   const relText = (s, o) => {
     if (lovers.includes(s) && lovers.includes(o)) return `${nm(o)}? I hardly know ${nm(o)}, to be honest.`;
     const i = suspects.indexOf(s), j = suspects.indexOf(o);
@@ -57,11 +57,24 @@ export function writeDialogue(c) {
     const press = s.temper; // how this suspect reacts when cornered, murderer or not
     if (there(s)) confront[`alibi_${s.id}`] = { requires: [asked], text: `Exactly as I told you. I was in the ${rn(room)}, ${act.act}.`, mood: "calm" };
     else if (s === M) confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${f(M.cover.act)}. Make of that what you like.`, mood: press, events: [broken] };
+    else if (proofSpot.has(s)) confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${f(s.secret.act)}.${seenToo}`, mood: press, gives: s === W ? ["hWeapon"] : [], events: [broken] };
     else if (s.secret.lover) confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${tryst}, with ${nm(s.secret.lover)}, from before ${fmtTime(keyAt)} until long after. We have kept it from everyone for a year, and I would rather it stayed that way.${seenToo}`, mood: press, gives: s === W ? ["hWeapon"] : [], events: [broken] };
     else confront[`alibi_${s.id}`] = { requires: [asked], text: `Fine. I wasn't in the ${rn(room)}. I was ${f(s.secret.act)}. Make of that what you like.${seenToo}`, mood: press, gives: s === W ? ["hWeapon"] : [], events: [broken] };
+    if (proofSpot.has(s)) {
+      const a = confront[`alibi_${s.id}`];
+      a.text += ` ${hints[`hProof_${s.id}`].say}`;
+      a.gives = [...(a.gives || []), `hProof_${s.id}`];
+      confront[`proof_${s.id}`] = { text: R.pick(PROOF_OWN), mood: "uneasy" };
+    }
     for (const o of others(s)) {
       const z = corroborator.get(o);
-      confront[`alibi_${o.id}`] = z === s
+      const vars = { o: nm(o), r: rn(o.claim.room), told: o.secret && f(o.secret.told), T: fmtTime(keyAt) };
+      if (proofSpot.has(o)) confront[`proof_${o.id}`] = z === s && route.get(o) === "D"
+        ? { text: say(s, fill(R.pick(PROOF_SEEN), vars)), mood: "uneasy", witness: true, events: [`ev:seen_${o.id}`] }
+        : { text: say(s, fill(R.pick(NOT_SEEN), vars)), mood: "calm", witness: true };
+      confront[`alibi_${o.id}`] = z === s && route.get(o) === "D"
+        ? { text: say(s, fill(R.pick(PROOF_NUDGE), vars)), mood: "uneasy", witness: true }
+        : z === s
         ? { text: say(s, fill(R.pick(SEEN), { o: nm(o), r: rn(o.claim.room), told: f(o.secret.told), T: fmtTime(keyAt) })), mood: "uneasy", witness: true, events: [`ev:seen_${o.id}`] }
         : { text: say(s, fill(R.pick(NOT_SEEN), { o: nm(o) })), mood: "calm", witness: true };
     }

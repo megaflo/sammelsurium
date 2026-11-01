@@ -3,7 +3,7 @@ import { CAUSES, HAIR_WORD, HAND_TELL, SHOES, SMOKES, STAGED_TELL, WEAPONS, WOUN
 
 // The fixed clues of the case and the deductions they support.
 export function makeClues(c) {
-  const { M, R, S, V, cause, chimer, core, corroborator, decoy, dimOf, f, innocents, keyAt, lovers, nm, others, route, served, server, spareSpots, spotWeapon, suspects, there, time, traceVal, tryst, victim, watch, weapon } = c;
+  const { M, R, S, V, cause, chimer, core, corroborator, proofSpot, decoy, dimOf, f, innocents, keyAt, lovers, nm, others, route, served, server, spareSpots, spotWeapon, suspects, there, time, traceVal, tryst, victim, watch, weapon } = c;
   // ---------- clues ----------
   const clues = {};
   const addClue = (id, c) => { clues[id] = { id, ...c }; };
@@ -24,6 +24,11 @@ export function makeClues(c) {
   for (const s of suspects) {
     addClue(`alibi_${s.id}`, { title: s.claim.act.title, icon: s.claim.act.icon, text: there(s) ? s.claim.act.yes : s.claim.act.no });
     for (const m of [s.motive, s.settled]) addClue(`motive_${s.id}_${m.id}`, { title: m.title, icon: m.icon, text: f(m.doc, { who: nm(s), surname: s.lib.surname }) });
+  }
+  // Proof of a secret (route D), or of the murderer's cover story: brought back and hidden.
+  for (const [s, spot] of proofSpot) {
+    const p = (s === M ? M.cover : s.secret).proof;
+    addClue(`proof_${s.id}`, { title: p.title, icon: p.icon, text: `${f(p.text, { n: nm(s) })} It was hidden ${spot.hiddenDef.found}.` });
   }
   const slow = core === "poison" ? " The label warns that it works slowly: death follows within the hour." : "";
   addClue("weapon", { title: cap(weapon.name), icon: weapon.id, text: `${cap(an(weapon.name))} with ${weapon.mark}, hidden ${spotWeapon.hiddenDef.found}: ${weapon.trace}.${slow}${traceVal.hair ? ` Caught on it is ${HAIR_WORD[traceVal.hair]}.` : ""}` });
@@ -60,7 +65,8 @@ export function makeClues(c) {
       deduce([`ev:broken_${s.id}`], { fact: { t: "who", allow: allBut(o), by: s.id } }, `${nm(s)} and ${nm(o)} were together ${tryst}, and each said so once the lies fell apart.`, s === lovers[0]);
     } else {
       const z = corroborator.get(s);
-      deduce([`ev:seen_${s.id}`], { fact: { t: "who", allow: allBut(s), by: z.id } }, `${nm(z)} saw ${nm(s)} ${f(s.secret.told)} at the time of the murder.`, true);
+      const shown = r === "D" ? `, but only said so when shown the ${clues[`proof_${s.id}`].title.toLowerCase()} that ${nm(s)} had hidden` : "";
+      deduce([`ev:seen_${s.id}`], { fact: { t: "who", allow: allBut(s), by: z.id } }, `${nm(z)} saw ${nm(s)} ${f(s.secret.told)} at the time of the murder${shown}.`, true);
     }
   }
   // Truthful people who sat together vouch for each other, whether the proof needs it or not.

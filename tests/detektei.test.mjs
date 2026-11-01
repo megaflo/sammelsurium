@@ -102,9 +102,10 @@ test("a trace always fits the murderer and exactly one other suspect", () => {
       const [route, dim] = r.split(":");
       if (route !== "A") continue;
       const s = k.suspects.find((x) => x.id === id);
-      const other = k.suspects.find((x) => x !== M && x !== s);
-      assert.equal(M.traits[dim], other.traits[dim], `${k.code} ${dim}`);
       assert.notEqual(s.traits[dim], M.traits[dim], `${k.code} ${dim}`);
+      const fits = k.suspects.filter((x) => x !== M && x.traits[dim] === M.traits[dim]).length;
+      if (dim === "hair") assert.ok(fits >= 1, `${k.code} ${dim}`);
+      else assert.equal(fits, 1, `${k.code} ${dim}`);
     }
     // Hair on the weapon, if any, never fits only one suspect.
     const hair = k.clues.weapon.text.match(/a single (dark|pale|red) hair/);
@@ -126,8 +127,8 @@ test("two grudges each; the settled one can be found out, the murderer's live on
 // ---------- well formed ----------
 test("cases are well formed", () => {
   for (const k of many) {
-    assert.equal(k.suspects.length, 3);
-    assert.equal(new Set(k.suspects.map((s) => s.lib.surname[0])).size, 3, "initials tell suspects apart");
+    assert.ok([3, 4].includes(k.suspects.length));
+    assert.equal(new Set(k.suspects.map((s) => s.lib.surname[0])).size, k.suspects.length, "initials tell suspects apart");
     assert.equal(k.suspects.filter((s) => s.role === "M").length, 1);
     assert.equal(k.rooms.length, 3);
     assert.equal(k.rooms.filter((r) => r.furniture.some((f) => f.kind === "body")).length, 1);
@@ -234,7 +235,9 @@ test("poison in advance: somebody heard the drink go in, but nobody names who ca
 
 test("lovers lie together and vouch for each other once caught; a frame puts an innocent's belonging by the body", () => {
   for (const k of byTwist("lovers")) {
-    const [a, b] = k.suspects.filter((s) => s.role !== "M");
+    const pair = k.suspects.filter((s) => s.secret && s.secret.lover);
+    assert.equal(pair.length, 2, k.code);
+    const [a, b] = pair;
     assert.equal(a.role, "L");
     assert.equal(b.role, "L");
     assert.equal(a.trace, b.trace);
@@ -366,5 +369,46 @@ test("the body is found after the time on the watch and after everybody left whe
       const until = answer(k, s, "where").match(/until (\d+:\d+ [ap]m)/)[1];
       assert.ok(late(found) > late(until), `${k.code}: found ${found}, ${s.id} until ${until}`);
     }
+  }
+});
+
+test("three or four suspects; with four, every innocent is still ruled out", () => {
+  const four = many.filter((k) => k.suspects.length === 4);
+  assert.ok(four.length > many.length / 6 && four.length < many.length / 2, `${four.length}`);
+  for (const k of four) assert.match(k.briefing, /Four people are still in the house/);
+  assert.ok(four.some((k) => k.twists.includes("lovers")));
+});
+
+test("two-step proof: the liar points to hidden proof, and the witness only speaks up when shown it", () => {
+  const withD = many.filter((k) => Object.values(k.routes).includes("D"));
+  assert.ok(withD.length > many.length / 5, `${withD.length}`);
+  for (const k of withD) for (const [id, r] of Object.entries(k.routes)) {
+    if (r !== "D") continue;
+    const s = k.suspects.find((x) => x.id === id);
+    const hint = k.hints[`hProof_${id}`];
+    assert.ok(hint && hint.spot && hint.clue === `proof_${id}`, k.code);
+    assert.ok(k.dialog[id].confront[`alibi_${id}`].gives.includes(hint.id), k.code);
+    const seers = k.suspects.filter((z) => (k.dialog[z.id].confront[`proof_${id}`] || { events: [] }).events.includes(`ev:seen_${id}`));
+    assert.equal(seers.length, 1, k.code);
+    // Shown only the broken alibi, nobody vouches for the liar yet.
+    assert.ok(!k.suspects.some((z) => k.dialog[z.id].confront[`alibi_${id}`].events.includes(`ev:seen_${id}`)), k.code);
+    assert.ok(s.role === "L", k.code);
+  }
+  // Without the proof, the case cannot be finished: withholding the proof's hint leaves more than one answer.
+  for (const k of withD.slice(0, 60)) {
+    const id = Object.entries(k.routes).find(([, r]) => r === "D")[0];
+    const pooled = [...solve(k).pooled].filter((t) => t !== `ev:seen_${id}`);
+    assert.ok(survivors(k, pooled).length > 1, k.code);
+  }
+  assert.ok(many.some((k) => Object.values(k.routes).includes("D") && solve(k).rounds === 3));
+});
+
+test("the murderer's cover story sometimes comes with proof too, and nobody confirms it", () => {
+  const faked = many.filter((k) => k.clues[`proof_${murderer(k).id}`]);
+  assert.ok(faked.length > 0);
+  for (const k of faked) {
+    const M = murderer(k);
+    assert.ok(k.dialog[M.id].confront[`alibi_${M.id}`].gives.includes(`hProof_${M.id}`), k.code);
+    assert.ok(!k.suspects.some((z) => (k.dialog[z.id].confront[`proof_${M.id}`] || { events: [] }).events.length), k.code);
   }
 });

@@ -3,9 +3,8 @@ import { rn } from "../util.js";
 
 // Secrets and traces on people; who saw and heard what.
 export function castPeople(c) {
-  const { M, MR, R, S, core, hideRoom, innocents, nm, roomOf, rooms, route, served, side, suspects, time, trueAlibi } = c;
+  const { M, MR, R, S, core, hideRoom, innocents, lovers, nm, roomOf, rooms, route, served, suspects, time, trueAlibi } = c;
   // ---------- secrets and traces on people ----------
-  const lovers = side === "lovers" ? innocents : [];
   const tryst = R.pick(TRYST), trystTrace = R.pick(TRYST_TRACE);
   for (const s of suspects) if (s.role === "L") s.secret = lovers.includes(s) ? { lover: lovers.find((o) => o !== s), told: `${tryst}, with ${nm(lovers.find((o) => o !== s))}` } : SECRETS[s.motive.id];
   M.cover = trueAlibi ? null : SECRETS[M.motive.id];
@@ -39,8 +38,21 @@ export function castPeople(c) {
   const noticer = (s) => s === W && s.role === "H";
   const server = core === "poison" ? R.pick(innocents.filter((s) => !noticer(s))) : null;
   const chimer = R.pick(suspects.filter((s) => !noticer(s) && s !== server && !(s === M && trueAlibi)));
+  // Who saw a liar where the liar really was (routes C and D). Lovers were off together, so they saw nobody.
+  const seer = (s) => { const o = innocents.filter((x) => x !== s && !lovers.includes(x)); return o.length && R.int(3) ? R.pick(o) : M; };
   const corroborator = new Map(); // liar -> who saw them
-  for (const s of innocents) if (route.get(s) === "C" && !lovers.includes(s)) corroborator.set(s, R.int(3) ? innocents.find((o) => o !== s) : M);
+  // Route D: the proof of the secret lies in a hidden place, and the liar says where once caught. The murderer's
+  // cover story sometimes comes with "proof" too, so pointing to proof doesn't mark anybody innocent; nobody
+  // confirms the murderer's.
+  const proofSpot = new Map(); // suspect -> hidden place
+  for (const s of innocents) {
+    if (route.get(s) === "D") {
+      if (spareSpots.length) proofSpot.set(s, spareSpots.pop());
+      else route.set(s, "C");
+    }
+    if (route.get(s) === "C" && !lovers.includes(s) || route.get(s) === "D") corroborator.set(s, seer(s));
+  }
+  if (M.cover && spareSpots.length && R.int(3) === 0) proofSpot.set(M, spareSpots.pop());
 
-  Object.assign(c, { W, bodyF, chimer, corroborator, glimpse, lovers, noticer, server, sighting, spareSpots, spotWeapon, tryst });
+  Object.assign(c, { W, bodyF, chimer, corroborator, glimpse, noticer, proofSpot, server, sighting, spareSpots, spotWeapon, tryst });
 }

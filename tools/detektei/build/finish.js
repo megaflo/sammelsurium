@@ -2,7 +2,7 @@ import { VERSION, codeFor, rn } from "../util.js";
 
 // Hidden spots, goal, the story of what happened, and item codes.
 export function finish(c) {
-  const { M, MR, S, V, W, found, attempt, cause, chimer, clues, code, content, core, decoy, deductions, dialog, dimOf, f, framed, hints, innocents, locks, lovers, manor, nm, rooms, route, served, server, side, spotWeapon, suspects, time, token, trueAlibi, tryst, victim, watch, weapon } = c;
+  const { M, MR, S, V, W, corroborator, found, proofSpot, attempt, cause, chimer, clues, code, content, core, decoy, deductions, dialog, dimOf, f, framed, hints, innocents, locks, lovers, manor, nm, rooms, route, served, server, side, spotWeapon, suspects, time, token, trueAlibi, tryst, victim, watch, weapon } = c;
   // ---------- hidden spots ----------
   const hiddenSpots = {};
   for (const h of Object.values(hints)) {
@@ -31,11 +31,12 @@ export function finish(c) {
   if (core === "moved") story.push(`${nm(M)} scrubbed the floor of the ${rn(MR)} and then claimed to have spent the evening there, ${mAct.act}. That much was true: it was where ${V} died.`);
   if (core === "poison") story.push(`At ${time}, ${nm(M)} really was in the ${rn(M.claim.room)}, ${mAct.act}. The alibi was true, and meant nothing.`);
   if (!trueAlibi) story.push(`${nm(M)} claimed to have been in the ${rn(M.claim.room)}, ${mAct.act}. That was a lie, and so was the story about ${f(M.cover.told)}.`);
+  if (proofSpot.has(M)) story.push(`${nm(M)} had prepared the ${clues[`proof_${M.id}`].title.toLowerCase()} in advance to prop up that story. Nobody had seen ${nm(M)} there.`);
   story.push(`${nm(M)}'s other grudge, ${M.settled.label.toLowerCase()}, had been settled before tonight.`);
   if (framed) story.push(`By the body ${nm(M)} left ${token(framed).name} that ${nm(framed)} had lost the day before, to throw suspicion on ${nm(framed)}.`);
   if (lovers.length) story.push(`${nm(lovers[0])} and ${nm(lovers[1])} both lied about where they were: they were together ${tryst}, and nobody was to know.`);
-  else for (const s of innocents) story.push(s.role === "L"
-    ? `${nm(s)} lied too, to hide a secret: ${nm(s)} was ${f(s.secret.told)}.`
+  for (const s of innocents.filter((x) => !lovers.includes(x))) story.push(s.role === "L"
+    ? `${nm(s)} lied too, to hide a secret: ${nm(s)} was ${f(s.secret.told)}.${route.get(s) === "D" ? ` ${nm(corroborator.get(s))} had seen it, but kept quiet until shown the ${clues[`proof_${s.id}`].title.toLowerCase()}.` : ""}`
     : `${nm(s)} told the truth: ${nm(s)} really was in the ${rn(s.claim.room)}, ${s.claim.act.act}.`);
   story.push(`${nm(W)} saw the murderer ${core === "poison" ? "hide the poison" : "hide the weapon"}${W.role === "L" ? `, but only said so once the lie about the ${rn(W.claim.room)} fell apart` : ""}.`);
 
@@ -53,6 +54,6 @@ export function finish(c) {
 }
 function briefing(victim, manor, S, suspects, found) {
   return `A storm rages over ${manor}. At ${found}, ${victim.name} was found dead in the ${rn(S)}. The doors were locked and the telephone lines are down; nobody has left. ` +
-    `Three people are still in the house: ${suspects.map((s) => `${s.name} (${s.title.toLowerCase()})`).join(", ")}. ` +
+    `${["Three", "Four"][suspects.length - 3]} people are still in the house: ${suspects.map((s) => `${s.name} (${s.title.toLowerCase()})`).join(", ")}. ` +
     `The police can't get through before morning. Until then, the case is yours.`;
 }

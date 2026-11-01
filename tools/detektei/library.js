@@ -129,17 +129,27 @@ export const MOTIVES = [
     dinner: "{V} asked at dinner whether anyone had seen the emerald brooch lately. {who} said nothing at all." },
 ];
 
-// Where the suspect who lies to hide a secret really was. Keyed by that suspect's motive.
+// Where the suspect who lies to hide a secret really was. Keyed by that suspect's motive. proof: what the liar
+// brought back and hid, which a witness recognises (route D).
 export const SECRETS = {
-  inheritance: { act: "in {V}'s dressing room upstairs, reading the new will I was never meant to see", told: "reading {V}'s new will in secret", trace: "A faint smell of {V}'s cologne clings to {n}'s clothes." },
-  blackmail: { act: "up in the attic, searching {V}'s old trunks", told: "searching the attic for the photographs {V} held", trace: "There are cobwebs on {n}'s shoulder and dust on both knees." },
-  debts: { act: "in the hall, on the telephone, begging creditors for one more week", told: "on the telephone, begging creditors for time", trace: "A telephone number is scribbled in pencil on {n}'s wrist." },
-  jealousy: { act: "out in the garden, waiting for someone who never came", told: "waiting in the garden for a secret meeting", trace: "Wet grass clings to {n}'s shoes, and the hems are damp." },
-  revenge: { act: "on the terrace with a bottle of {V}'s whisky, thinking about old wrongs", told: "drinking alone on the terrace", trace: "{n}'s breath smells of whisky, and the eyes are red." },
-  exposure: { act: "in the gatehouse, burning the account books before anyone could read them", told: "burning the account books in the gatehouse", trace: "There is soot on {n}'s fingertips and a smell of smoke." },
-  eviction: { act: "up in the box room, packing my trunk in case I was thrown out tonight", told: "packing a trunk in the box room, ready to leave", trace: "A luggage label is stuck to {n}'s sleeve, and the cuffs are grey with box-room dust." },
-  forgery: { act: "in the post room by the back door, steaming open {V}'s letter to the bank", told: "steaming open {V}'s letters in the post room", trace: "{n}'s fingertips are pink and puckered, as if from steam, and there's a smear of sealing wax on one cuff." },
-  theft: { act: "in the gun room, hunting through {V}'s cabinet for the pawn ticket", told: "searching the gun room for a pawn ticket", trace: "There's gun oil on {n}'s fingers; the smell of it hangs about the cuffs." },
+  inheritance: { act: "in {V}'s dressing room upstairs, reading the new will I was never meant to see", told: "reading {V}'s new will in secret", trace: "A faint smell of {V}'s cologne clings to {n}'s clothes.",
+    proof: { title: "Copied notes", icon: "paper", text: "Notes in {n}'s hand, copied word for word from {V}'s new will. The last line breaks off mid-sentence." } },
+  blackmail: { act: "up in the attic, searching {V}'s old trunks", told: "searching the attic for the photographs {V} held", trace: "There are cobwebs on {n}'s shoulder and dust on both knees.",
+    proof: { title: "Dusty photographs", icon: "photo", text: "A bundle of photographs of {n}, grey with attic dust, with cobwebs still caught in the string." } },
+  debts: { act: "in the hall, on the telephone, begging creditors for one more week", told: "on the telephone, begging creditors for time", trace: "A telephone number is scribbled in pencil on {n}'s wrist.",
+    proof: { title: "Telephone pad", icon: "paper", text: "The pad from beside the hall telephone. On the top sheet, in {n}'s hand: a London number and \"one more week, please\", underlined three times." } },
+  jealousy: { act: "out in the garden, waiting for someone who never came", told: "waiting in the garden for a secret meeting", trace: "Wet grass clings to {n}'s shoes, and the hems are damp.",
+    proof: { title: "Rain-soaked note", icon: "letter", text: "A rain-soaked note in {n}'s hand: \"I waited by the fountain. Where were you?\" The edges are still wet." } },
+  revenge: { act: "on the terrace with a bottle of {V}'s whisky, thinking about old wrongs", told: "drinking alone on the terrace", trace: "{n}'s breath smells of whisky, and the eyes are red.",
+    proof: { title: "Whisky bottle", icon: "bottle", text: "A bottle of {V}'s best whisky, two-thirds empty, wrapped in a terrace cushion cover still damp with rain." } },
+  exposure: { act: "in the gatehouse, burning the account books before anyone could read them", told: "burning the account books in the gatehouse", trace: "There is soot on {n}'s fingertips and a smell of smoke.",
+    proof: { title: "Singed ledger", icon: "ledger", text: "Half-burnt pages of the account books, in {n}'s handwriting. They still smell of smoke." } },
+  eviction: { act: "up in the box room, packing my trunk in case I was thrown out tonight", told: "packing a trunk in the box room, ready to leave", trace: "A luggage label is stuck to {n}'s sleeve, and the cuffs are grey with box-room dust.",
+    proof: { title: "Packing list", icon: "paper", text: "A list in {n}'s hand headed \"To pack\", half the items ticked off, with box-room dust on the folds." } },
+  forgery: { act: "in the post room by the back door, steaming open {V}'s letter to the bank", told: "steaming open {V}'s letters in the post room", trace: "{n}'s fingertips are pink and puckered, as if from steam, and there's a smear of sealing wax on one cuff.",
+    proof: { title: "Steamed envelope", icon: "letter", text: "{V}'s letter to the bank, its envelope steamed open and stuck down again badly. The gum is still tacky." } },
+  theft: { act: "in the gun room, hunting through {V}'s cabinet for the pawn ticket", told: "searching the gun room for a pawn ticket", trace: "There's gun oil on {n}'s fingers; the smell of it hangs about the cuffs.",
+    proof: { title: "Gun-room page", icon: "paper", text: "A page torn from the gun-room book, smudged with fresh gun oil." } },
 };
 
 // Traces an interrogator can notice on a suspect. A lying suspect shows the trace of the secret above; everybody
@@ -306,6 +316,12 @@ export const SEEN = [
   "So {o} lied to you. I'm not surprised. But I saw {o} {told} just before {T}, and {o} was still there when I went past again.",
   "{o} wasn't in the {r}, no. I kept quiet to spare {o} the embarrassment, but I saw {o} {told}, around {T}. I'd swear to it.",
 ];
+// Route D: a witness who saw a liar won't swear to it in the dark, until shown the proof the liar hid.
+export const PROOF_NUDGE = ["{o} wasn't in the {r}? I may have seen {o} somewhere else tonight, but it was dark. Show me something definite and I'll tell you.",
+  "I might have seen {o} later on, but I wouldn't swear to it in the dark. Find me something solid, Inspector."];
+export const PROOF_SEEN = ["Where did you find that? Then it was {o} I saw {told}, around {T}. It was dark, and I wasn't sure enough to say. Now I am.",
+  "That settles it. I did see {o} {told}, just before {T}. I didn't like to say until I was certain."];
+export const PROOF_OWN = ["There. That's what I was doing. Now perhaps you'll believe me.", "Yes, that's it. I'm not proud of it, but there it is."];
 export const BODY_REACT = ["Dreadful. Simply dreadful. Must you show me that?", "Put it away, please. I saw enough when they found {Vhim}.", "Poor {V}. Whatever {Vhe} was, {Vhe} didn't deserve that.",
   "I'd rather not look again, if it's all the same to you.", "{V} had enemies. That much is plain from this.", "Cover {Vhim} up, for pity's sake."];
 export const WEAPON_REACT = ["Good heavens. Is that what did it? I've never touched it.", "I've seen it about the house, of course. Everyone has.", "Must I look at that? It could have been anyone's hand on it.",

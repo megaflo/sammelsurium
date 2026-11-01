@@ -120,7 +120,7 @@ export function placeThings(c) {
   let want = Math.round(freeLeaves("scfw").length * 0.4);
   const owners = R.shuffle(suspects);
   while (want > 0 && library.length) {
-    const item = library.pop(), owner = owners[finds.length % 3], id = `find${finds.length}`;
+    const item = library.pop(), owner = owners[finds.length % owners.length], id = `find${finds.length}`;
     let fresh = false, room = null;
     if (item.presence) {
       fresh = there(owner) && R.int(2) === 0;
