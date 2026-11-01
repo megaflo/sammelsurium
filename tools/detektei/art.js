@@ -403,7 +403,7 @@ export function roomArt(room, opts = {}) {
 export const ROOM_DEFS = `<defs><radialGradient id="lamp" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#ffd890" stop-opacity=".08"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient></defs>`;
 
 // ---------- portraits ----------
-const REGIONS = { buttons: [60, 124, 11], studs: [60, 122, 10], lapel: [45, 120, 9], tiepin: [60, 126, 9], strap: [45, 114, 9], earring: [83, 82, 8], hairpin: [74, 30, 10], body: [60, 120, 26] };
+export const REGIONS = { buttons: [60, 124, 11], studs: [60, 122, 10], lapel: [45, 120, 9], tiepin: [60, 126, 9], strap: [45, 114, 9], earring: [83, 82, 8], hairpin: [74, 30, 10], body: [60, 120, 26] };
 
 export function portrait(look, o = {}) {
   const mood = o.mood || "calm";
@@ -522,6 +522,7 @@ const ICONS = {
   key: c(18, 32, 9, "none", `stroke="${gold}" stroke-width="4"`) + l(27, 32, 54, 32, gold, 4) + l(46, 32, 46, 40, gold, 4) + l(52, 32, 52, 38, gold, 4) + p("M12 22q-4-10 6-12", "none", `stroke="#b3261e" stroke-width="2"`),
   glove: p("M20 56V30l-6-12q0-4 4-2l6 10V10q0-4 4-4t4 4v14V8q0-4 4-4t4 4v16V12q0-4 4-4t4 4v28q0 10-8 16z", "#6a4428"),
   cartridge: r(26, 22, 12, 30, gold, `rx="1"`) + p("M26 22q6-18 12 0z", "#b87a3a") + r(24, 50, 16, 4, "#a8843a"),
+  shoe: p("M10 38q0-6 6-6h8l6 6h12q14 0 14 10v4H10z", "#4a3426") + r(10, 50, 48, 4, "#2a1c14", `rx="1"`) + p("M24 32l4 6M30 34l4 6", "none", `stroke="#cdbf9f" stroke-width="1.5"`),
   cup: p("M14 24h32v14q0 12-16 12t-16-12z", "#f4efe2", `stroke="#cfc6ae"`) + p("M46 28q10 0 8 8t-8 6", "none", `stroke="#cfc6ae" stroke-width="3"`) + e(30, 52, 22, 4, "#e2d8c0") + p("M20 24q4 4 8 0", "none", `stroke="#c9433a" stroke-width="2.5"`),
   // weapons
   candlestick: r(28, 8, 8, 14, "#f4efe2") + p("M32 2q-4 4 0 6q4-2 0-6z", "#f2a93a") + p("M22 22h20l-4 6h-12z", gold) + r(29, 28, 6, 18, gold) + p("M18 56h28l-4-10h-20z", gold),
