@@ -334,8 +334,10 @@ test("every clue, motive and belonging names a picture that exists", () => {
   const known = new Set(ICON_NAMES);
   for (const m of MOTIVES) { assert.ok(known.has(m.icon), m.id); assert.ok(known.has(m.settled.icon), m.id); }
   for (const s of SUSPECTS) assert.ok(known.has(s.token.icon), s.id);
+  for (const [id, kind] of Object.entries(KINDS)) if (kind.activity) assert.ok(known.has(kind.activity.icon), id);
   for (const k of many) for (const c of Object.values(k.clues)) {
     assert.ok(known.has(c.icon), `${k.code} ${c.id}: ${c.icon}`);
+    assert.notEqual(c.icon, "magnifier", `${k.code} ${c.id} has no picture of its own`);
     assert.doesNotMatch(icon(c.icon), /undefined|NaN/);
   }
 });
