@@ -113,12 +113,12 @@ function home() {
 
 function rulesHtml() {
   return `<p>Two players, two devices, no connection needed. Both enter the same case number and pick different roles.</p>
-  <p><strong>The interrogator</strong> questions the three suspects, looks at them closely, and confronts them with clues. Some answers contain a <em>hint</em> with a three-character code.</p>
+  <p><strong>The interrogator</strong> questions the three or four suspects, looks at them closely, and confronts them with clues. Some answers contain a <em>hint</em> with a three-character code.</p>
   <p><strong>The field agent</strong> searches three rooms, opening furniture and looking into drawers, pockets and the like. Interesting finds are <em>clues</em> with a code.</p>
   <p>Read codes to each other. The interrogator types a clue code into <em>Confront with a clue</em> and shows the clue to a suspect. The field agent types a hint code into <em>Use a hint</em> and tries it in the room where it fits, to uncover hidden places. Witnesses rarely name a room; they describe what they saw or smelled through the door.</p>
   <p>Some drawers, boxes and cases are locked with numbered dials. Someone in the house knows which number the victim used, a date or part of a telephone number, and the number itself is written on something in the rooms.</p>
   <p>Everyone in the house had two grudges against the victim. One of them was settled before tonight; a paper, or somebody who knows, will tell you which.</p>
-  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Nothing is labelled. No single clue names the killer: a trace at the scene may fit two of the suspects, and only an alibi that holds, or a witness, clears the other. Suspects lie about where they were, but only the killer lies about anyone else. Read the times, the traces and the wounds against what the suspects say, and look closely at the suspects. Not every case is what it first looks like.</p>
+  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Nothing is labelled. No single clue names the killer: a trace at the scene may fit two of the suspects, and only an alibi that holds, or a witness, clears the others. Some witnesses won't swear to what they saw until you show them something definite. Suspects lie about where they were, but only the killer lies about anyone else. Read the times, the traces and the wounds against what the suspects say, and look closely at the suspects. Not every case is what it first looks like.</p>
   <p>Take as long as you like. When you're sure, accuse: name the murderer, the weapon and the motive. You get one try.</p>`;
 }
 

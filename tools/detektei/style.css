@@ -100,7 +100,7 @@ button svg { width: 1.6em; height: 1.6em; display: inline-block; vertical-align:
 .hintbtn { display: flex; align-items: center; }
 
 /* interrogator */
-.stabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.stabs { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; margin-bottom: 10px; }
 .stab { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; text-align: center; font-size: .85rem; }
 .stab .face { width: 56px; }
 .stab .face svg { border-radius: 8px; }
@@ -160,7 +160,7 @@ button svg { width: 1.6em; height: 1.6em; display: inline-block; vertical-align:
 
 /* accusation */
 .pick { display: grid; gap: 8px; }
-.pick.three { grid-template-columns: repeat(3, 1fr); }
+.pick.three { grid-auto-flow: column; grid-auto-columns: 1fr; }
 .pick.weapons { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
 .pick.motives { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 .pick button { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; font-size: .85rem; padding: 8px 6px; }
