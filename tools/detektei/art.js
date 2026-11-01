@@ -552,8 +552,12 @@ const ICONS = {
   door: r(16, 6, 32, 52, "#5a3a22", `rx="2"`) + r(20, 10, 24, 20, "#4a2e1a") + r(20, 34, 24, 20, "#4a2e1a") + c(42, 34, 2.4, gold),
   person: c(32, 22, 11, "#c9b9a0") + p("M12 58q0-20 20-20t20 20z", "#c9b9a0"),
 };
+// Every icon gets a thin ink outline, so pale objects (paper, porcelain, pearls) stay visible on the cream case-file paper.
+let outlineId = 0;
 export function icon(name, label = "") {
-  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" ${label ? `role="img" aria-label="${label}"` : `aria-hidden="true"`}>${ICONS[name] || ICONS.magnifier}</svg>`;
+  const id = `ol${++outlineId}`;
+  const outline = `<filter id="${id}" x="-15%" y="-15%" width="130%" height="130%"><feMorphology in="SourceAlpha" operator="dilate" radius="1" result="d"/><feFlood flood-color="#2b2117" flood-opacity=".7"/><feComposite in2="d" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" ${label ? `role="img" aria-label="${label}"` : `aria-hidden="true"`}>${outline}<g filter="url(#${id})">${ICONS[name] || ICONS.magnifier}</g></svg>`;
 }
 
 export function logo() {

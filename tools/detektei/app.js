@@ -160,7 +160,8 @@ function briefing() {
 }
 
 function topbar() {
-  const count = role === "F" ? `${st.found.length} clue${st.found.length === 1 ? "" : "s"} found` : `${st.clues.length} clue${st.clues.length === 1 ? "" : "s"} received`;
+  const n = (role === "F" ? st.found : st.clues).length;
+  const count = `${n} clue${n === 1 ? "" : "s"}`;
   return `<header class="top">
     <button class="ghost" data-act="menu" aria-label="Menu">☰</button>
     <div class="clock"><strong>${esc(K.manor)}</strong><span>${ROLE[role]} · ${count}</span></div>
@@ -568,8 +569,7 @@ function notebook(tab) {
     body = st.hints.length
       ? `<ul class="ncards">${st.hints.map((id) => { const h = K.hints[id]; const found = F && h.spot && st.revealed[K.hiddenSpots[h.spot].id];
           return `<li><div class="ncard hint ${found ? "done" : ""}"><span class="nart">${icon("hint")}</span>
-            <span class="ntext"><span class="nbody">${esc(h.text)}</span>${F ? `<span class="nstate">${found ? "Found ✓" : h.spot ? "Try it in the room where it fits" : "Find the number, then try the lock"}</span>` : ""}</span>
-            <span class="code chip">${h.code}</span></div></li>`; }).join("")}</ul>`
+            <span class="ntext"><span class="code chip">${h.code}</span><span class="nbody">${esc(h.text)}</span>${F ? `<span class="nstate">${found ? "Found ✓" : h.spot ? "Try it in the room where it fits" : "Find the number, then try the lock"}</span>` : ""}</span></div></li>`; }).join("")}</ul>`
       : empty(F ? "No hints yet. The interrogator reads you their codes." : "No hints yet. Some answers and details contain one.");
   } else {
     body = K.suspects.map((x) => { const lines = st.transcript.filter((t) => t.s === x.id);

@@ -1,5 +1,5 @@
 // Caches the game on first visit so it works offline. Bump the version whenever a file changes.
-const CACHE = "detektei-v8";
+const CACHE = "detektei-v9";
 const FILES = ["./", "index.html", "style.css", "app.js", "case.js", "art.js"];
 
 self.addEventListener("install", (e) => {
