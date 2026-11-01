@@ -95,8 +95,9 @@ function rulesHtml() {
   <p><strong>The interrogator</strong> questions the three suspects, looks at them closely, and confronts them with clues. Some answers contain a <em>hint</em> with a three-character code.</p>
   <p><strong>The field agent</strong> searches three rooms, opening furniture and looking into drawers, pockets and the like. Interesting finds are <em>clues</em> with a code.</p>
   <p>Read codes to each other. The interrogator enters clue codes to confront suspects with them. The field agent enters hint codes, then applies a hint in the room where it fits to uncover hidden places. Witnesses rarely name a room; they describe what they saw or smelled through the door.</p>
-  <p>Some drawers are locked with a combination of day and month. Someone in the house knows which date the victim used, and the date itself is written on something in the rooms.</p>
-  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Nothing is labelled. Read the times, the hair colours and the wounds against what the suspects say, and work out together which clues matter. Not every case is what it first looks like.</p>
+  <p>Some drawers, boxes and cases are locked with numbered dials. Someone in the house knows which number the victim used, a date or part of a telephone number, and the number itself is written on something in the rooms.</p>
+  <p>Everyone in the house had two grudges against the victim. One of them was settled before tonight; a paper, or somebody who knows, will tell you which.</p>
+  <p>Most of what turns up leads nowhere: notes, tickets, stains and secrets that have nothing to do with the murder. Nothing is labelled. No single clue names the killer: a trace at the scene may fit two of the suspects, and only an alibi that holds, or a witness, clears the other. Suspects lie about where they were, but only the killer lies about anyone else. Read the times, the traces and the wounds against what the suspects say, and look closely at the suspects. Not every case is what it first looks like.</p>
   <p>Take as long as you like. When you're sure, accuse: name the murderer, the weapon and the motive. You get one try.</p>`;
 }
 
@@ -205,7 +206,7 @@ function fieldView() {
   return `<nav class="tabs" aria-label="Rooms">${tabs}</nav>
     <div class="scene">
       <svg id="scene" viewBox="${(ui.view || vb).join(" ")}" data-target="${vb.join(" ")}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(room.name)}">
-        ${ROOM_DEFS}${roomArt(room, { revealed: revealed.filter((h) => h.room === room.id) })}
+        ${ROOM_DEFS}${roomArt(room, { revealed: revealed.filter((h) => h.room === room.id), locks: Object.values(K.locks).filter((lk) => lk.room === room.id && !st.unlocked[lk.leaf]) })}
         ${focus ? `<rect x="-10" y="-10" width="420" height="280" fill="#000" opacity=".35" data-act="up" data-to="${path.length > 1 ? path[0].id : ""}" mask="url(#cut)"/><mask id="cut"><rect x="-10" y="-10" width="420" height="280" fill="#fff"/><rect x="${focus.x - 2}" y="${focus.y - 2}" width="${focus.w + 4}" height="${focus.h + 4}" fill="#000" rx="3"/></mask>` : ""}
         ${hot}${badges}
       </svg>
@@ -240,7 +241,8 @@ const isLocked = (n) => !n.hidden && K.content[n.id] && K.content[n.id].lock && 
 
 function examine(room, n) {
   if (isLocked(n)) return lockSheet(n);
-  const content = n.hidden ? { clue: n.clue } : K.content[n.id];
+  const raw = n.hidden ? { clue: n.clue } : K.content[n.id];
+  const content = raw.lock ? { clue: K.locks[raw.lock].clue } : raw;
   if (!st.examined[n.id]) {
     st.examined[n.id] = true;
     if (content.clue && !st.found.includes(content.clue)) st.found.push(content.clue);
@@ -262,27 +264,31 @@ function showFind(label, content) {
   }
 }
 
-// A locked leaf: its clue code goes to the interrogator; the dials take day and month, as many tries as you like.
+// A locked leaf: its clue code goes to the interrogator; the dials take a date (day and month) or three digits,
+// as many tries as you like.
 function lockSheet(n, msg = "") {
-  if (!st.found.includes("lock")) { st.found.push("lock"); save(); render(); }
-  const c = K.clues.lock;
+  const lk = K.locks[K.content[n.id].lock];
+  if (!st.found.includes(lk.lockClue)) { st.found.push(lk.lockClue); save(); render(); }
+  const c = K.clues[lk.lockClue];
+  const date = lk.type === "date";
   sheet(`<div class="find">${icon(c.icon, c.title)}<div><p class="eyebrow">${esc(n.label)}</p><h2>${esc(c.title)}</h2><p>${esc(c.text)}</p></div></div>
     <div class="pass"><span>Clue code for the interrogator</span><strong class="code">${c.code}</strong></div>
-    <form data-form="lock" data-id="${n.id}" class="codeform"><input name="code" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="DDMM" aria-label="Combination: day and month"><button class="primary" type="submit">Turn the dials</button></form>
-    ${msg ? `<p class="err">${esc(msg)}</p>` : `<p class="soft small">Two digits for the day, two for the month: 14 June is 1406.</p>`}`);
+    <form data-form="lock" data-id="${n.id}" class="codeform"><input name="code" inputmode="numeric" maxlength="${lk.digits}" autocomplete="off" placeholder="${date ? "DDMM" : "000"}" aria-label="${date ? "Combination: day and month" : "Combination: three digits"}"><button class="primary" type="submit">Turn the dials</button></form>
+    ${msg ? `<p class="err">${esc(msg)}</p>` : `<p class="soft small">${date ? "Two digits for the day, two for the month: 14 June is 1406." : "Three digits, one for each dial."}</p>`}`);
 }
 
 function tryLock(id, input) {
   const n = findNode(roomById(ui.room), id);
+  const lk = K.locks[K.content[id].lock];
   const combo = String(input).replace(/\D/g, "");
-  if (combo !== K.lock.combo) return lockSheet(n, `${combo.padStart(4, "-")}: the dials won't budge.`);
+  if (combo !== lk.combo) return lockSheet(n, `${combo.padStart(lk.digits, "-")}: the dials won't budge.`);
   st.unlocked[id] = true;
   st.examined[id] = true;
-  if (!st.found.includes(K.lock.clue)) st.found.push(K.lock.clue);
+  if (!st.found.includes(lk.clue)) st.found.push(lk.clue);
   save();
   closeSheet();
   render();
-  showFind(n.label, { clue: K.lock.clue });
+  showFind(n.label, { clue: lk.clue });
 }
 
 function applyHintSheet() {
@@ -377,9 +383,10 @@ function look() {
   const d = K.dialog[s.id];
   const fresh = d.observations.filter((o) => hasAll(o.requires) && !st.seen[`${s.id}:${o.id}`]);
   if (!fresh.length) { toast(`Nothing new catches your eye about ${s.short}. Not yet, anyway.`); return; }
-  const o = fresh[0];
-  st.seen[`${s.id}:${o.id}`] = true;
-  reply(s, { q: "You study " + s.short + " closely.", text: o.text, mood: st.last[s.id] ? st.last[s.id].mood : "calm", gives: o.gives, highlight: o.region });
+  for (const o of fresh) st.seen[`${s.id}:${o.id}`] = true;
+  const region = fresh.find((o) => o.region && o.region !== "body") || fresh.find((o) => o.region);
+  reply(s, { q: "You study " + s.short + " closely.", text: fresh.map((o) => o.text).join(" "), mood: st.last[s.id] ? st.last[s.id].mood : "calm",
+    gives: fresh.flatMap((o) => o.gives), events: fresh.flatMap((o) => o.events || []), highlight: region && region.region });
 }
 
 function confrontSheet() {
@@ -447,7 +454,7 @@ function enterCode(input) {
   render();
   if (role === "F") {
     sheet(`<div class="find">${icon("hint")}<div><p class="eyebrow">${isNew ? "New hint" : "You already have this hint"}</p><p>${esc(hit.item.text)}</p></div></div>
-      <p class="soft">${hit.item.spot ? "Go to the room where you think it fits and choose <em>Use a hint</em>." : "Find the date it means, then try it on the lock."}</p><button class="primary wide" data-act="close">OK</button>`);
+      <p class="soft">${hit.item.spot ? "Go to the room where you think it fits and choose <em>Use a hint</em>." : "Find the number it means, then try it on the lock."}</p><button class="primary wide" data-act="close">OK</button>`);
   } else {
     const c = hit.item;
     sheet(`<div class="find">${icon(c.icon)}<div><p class="eyebrow">${isNew ? "New clue" : "You already have this clue"}</p><h2>${esc(c.title)}</h2>${c.tag ? `<p class="tag">${esc(c.tag)}</p>` : ""}<p>${esc(c.text)}</p></div></div>
