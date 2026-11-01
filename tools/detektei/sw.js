@@ -1,6 +1,7 @@
 // Caches the game on first visit so it works offline. Bump the version whenever a file changes.
-const CACHE = "detektei-v11";
-const FILES = ["./", "index.html", "style.css", "app.js", "case.js", "art.js"];
+const CACHE = "detektei-v12";
+const FILES = ["./", "index.html", "style.css", "app.js", "case.js", "art.js", "util.js", "library.js", "furniture.js",
+  ...["index", "answer", "house", "proof", "people", "clues", "placement", "hints", "dialogue", "finish"].map((n) => `build/${n}.js`)];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
