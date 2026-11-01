@@ -272,3 +272,7 @@ button.ncard:hover { border-color: var(--gold); transform: translateY(-1px); }
   .cap { flex: 1; min-width: 14rem; text-align: left; align-self: center; }
   .cap .pass { justify-content: space-between; }
 }
+
+.nart.big { width: 84px; height: 84px; padding: 8px; }
+.sheet-card .codeform { margin: 8px 0 4px; }
+.sheet-card .codeform input { min-height: 52px; }
