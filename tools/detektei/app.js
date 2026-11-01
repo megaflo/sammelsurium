@@ -1,4 +1,4 @@
-import { makeCase, newCaseCode, parseCaseCode, lookup, checkAccusation, leaves, WEAPONS, MOTIVES } from "./case.js";
+import { makeCase, newCaseCode, parseCaseCode, lookup, checkAccusation, leaves, clueSpots, WEAPONS, MOTIVES } from "./case.js";
 import { roomArt, ROOM_DEFS, portrait, icon, logo, REGIONS } from "./art.js";
 
 const app = document.getElementById("app");
@@ -20,6 +20,7 @@ const ROLE = { I: "Interrogator", F: "Field agent" };
 let screen = "home"; // home | new | role | briefing | game | accuse | result
 let pending = null; // case code chosen but no role yet
 let K = null; // the case
+let WHERE = {}; // clue id -> where it lies, from clueSpots()
 let role = null; // "I" | "F"
 let st = null; // saved progress of this device
 let ui = {};
@@ -35,6 +36,7 @@ const save = () => store.set(saveKey(), st);
 
 function open(code, r) {
   K = makeCase(code);
+  WHERE = clueSpots(K);
   role = r;
   st = { ...blank(r), ...(store.get(`case:${code}:${r}`) || {}) };
   ui = { room: K.rooms[0].id, focus: null, suspect: K.suspects[0].id, view: null };
@@ -192,6 +194,36 @@ const isLeaf = (n) => n.hidden || !n.children || !n.children.length;
 function leafDone(n) { return !!st.examined[n.id]; }
 function nodeDone(n) { return isLeaf(n) ? leafDone(n) : leaves(n).every(leafDone) && (!hiddenFor(n) || leafDone(hiddenFor(n))); }
 
+// What the field agent has taken from a spot (or anything inside it), and from a room, in the order found.
+const within = (id, n) => WHERE[id] && (WHERE[id].at === n.id || WHERE[id].at.startsWith(n.id + "."));
+const foundIn = (n) => st.found.filter((id) => within(id, n));
+const foundInRoom = (room) => st.found.filter((id) => WHERE[id] && WHERE[id].room === room.id);
+const placeOf = (id, withRoom = true) => { const w = WHERE[id]; return w ? `${withRoom ? `${roomById(w.room).name} · ` : ""}${w.path.join(" › ")}` : ""; };
+const n1 = (v) => +v.toFixed(1);
+// An icon drawn inside the scene's SVG.
+const iconAt = (name, x, y, size) => icon(name).replace("<svg ", `<svg x="${n1(x)}" y="${n1(y)}" width="${n1(size)}" height="${n1(size)}" `);
+
+// Searched spots carry an evidence tag for each clue taken from them; spots searched in vain keep a plain tick.
+function sceneTags(k, zoomed) {
+  const got = foundIn(k);
+  const done = nodeDone(k);
+  if (!got.length) {
+    if (!done) return "";
+    const r = zoomed ? 2.6 : 5, d = zoomed ? 0.8 : 1;
+    return `<g class="badge" pointer-events="none"><circle cx="${k.x + k.w - 4 * d}" cy="${k.y + 4 * d}" r="${r}"/><path d="M${k.x + k.w - 6.5 * d} ${k.y + 4 * d}l${2 * d} ${2 * d} ${4 * d}-${4 * d}" /></g>`;
+  }
+  const s = zoomed ? 11 : 22, step = s * 0.7, shown = got.slice(-3);
+  const right = Math.min(k.x + k.w + s * 0.2, 400), y = Math.max(k.y - s * 0.25, 0);
+  const x0 = Math.max(right - s - (shown.length - 1) * step, 0);
+  const tags = shown.map((id, i) => {
+    const x = x0 + i * step, pad = s * 0.1;
+    return `<rect class="evtag-bg" x="${n1(x)}" y="${n1(y)}" width="${s}" height="${s}" rx="${n1(s * 0.2)}"/>${iconAt(K.clues[id].icon, x + pad, y + pad, s - 2 * pad)}`;
+  }).join("");
+  const tx = x0 + (shown.length - 1) * step + s, ty = y + s, tr = s * 0.24;
+  const tick = done ? `<g class="badge"><circle cx="${n1(tx)}" cy="${n1(ty)}" r="${n1(tr)}"/><path d="M${n1(tx - tr * 0.5)} ${n1(ty)}l${n1(tr * 0.4)} ${n1(tr * 0.4)} ${n1(tr * 0.7)}-${n1(tr * 0.75)}" /></g>` : "";
+  return `<g class="evtags" pointer-events="none">${tags}${tick}</g>`;
+}
+
 function viewBoxFor(n) {
   if (!n) return [0, 0, 400, 260];
   const ar = 400 / 260;
@@ -216,12 +248,19 @@ function fieldView() {
   const kids = childrenOf(room, focus);
   const revealed = Object.values(K.hiddenSpots).filter((h) => st.revealed[h.id]);
   const hot = kids.map((k) => `<rect class="hot ${nodeDone(k) ? "done" : ""}" data-act="node" data-id="${k.id}" x="${k.x}" y="${k.y}" width="${k.w}" height="${k.h}" rx="3"><title>${esc(k.label)}</title></rect>`).join("");
-  const badges = kids.filter(nodeDone).map((k) => `<g class="badge" pointer-events="none"><circle cx="${k.x + k.w - 4}" cy="${k.y + 4}" r="${focus ? 2.6 : 5}"/><path d="M${k.x + k.w - 6.5} ${k.y + 4}l${focus ? 1.6 : 2} ${focus ? 1.6 : 2} ${focus ? 3 : 4}-${focus ? 3.2 : 4}" /></g>`).join("");
+  const badges = kids.map((k) => sceneTags(k, !!focus)).join("");
   const tabs = K.rooms.map((r) => `<button class="tab ${r.id === ui.room ? "on" : ""}" data-act="room" data-id="${r.id}">${esc(r.name)}${r.id === K.scene ? " ✝" : ""}</button>`).join("");
   const crumbs = [`<button class="crumb" data-act="up" data-to="">${esc(room.name)}</button>`, ...path.map((n, i) => i === path.length - 1 ? `<span class="crumb now">${esc(n.label)}</span>` : `<button class="crumb" data-act="up" data-to="${n.id}">${esc(n.label)}</button>`)].join(" › ");
+  const minis = (k) => foundIn(k).slice(-3).map((id) => `<span class="mini-ev">${icon(K.clues[id].icon)}</span>`).join("");
   const list = kids.map((k) => `<li><button data-act="node" data-id="${k.id}" class="spot ${nodeDone(k) ? "done" : ""} ${k.hidden ? "secret" : ""}">
-      <span>${esc(k.label)}</span><span class="meta">${isLeaf(k) ? (leafDone(k) ? "examined ✓" : isLocked(k) ? "locked" : "examine") : nodeDone(k) ? "searched ✓" : "look closer ›"}</span></button></li>`).join("");
+      <span>${esc(k.label)}</span><span class="meta">${minis(k)}${isLeaf(k) ? (leafDone(k) ? "examined ✓" : isLocked(k) ? "locked" : "examine") : nodeDone(k) ? "searched ✓" : "look closer ›"}</span></button></li>`).join("");
   const vb = viewBoxFor(focus);
+  const taken = foundInRoom(room);
+  const tray = taken.length ? `<section class="tray" aria-label="Evidence from the ${esc(room.name.toLowerCase())}">
+      <p class="tray-h">Evidence from the ${esc(room.name.toLowerCase())} <span class="count">${taken.length}</span></p>
+      <ul>${taken.map((id) => { const c = K.clues[id];
+        return `<li><button class="evtag" data-act="viewClue" data-id="${id}" data-from="tray" title="${esc(placeOf(id))}"><span class="nart">${icon(c.icon)}</span><span class="evlabel">${esc(c.title)}</span></button></li>`; }).join("")}</ul>
+    </section>` : "";
   return `<nav class="tabs" aria-label="Rooms">${tabs}</nav>
     <div class="scene">
       <svg id="scene" viewBox="${(ui.view || vb).join(" ")}" data-target="${vb.join(" ")}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(room.name)}">
@@ -230,6 +269,7 @@ function fieldView() {
         ${hot}${badges}
       </svg>
     </div>
+    ${tray}
     <div class="crumbs">${crumbs}</div>
     <ul class="spots">${list}</ul>
     <div class="row actions">
@@ -559,12 +599,7 @@ function notebook(tab) {
   const empty = (t) => `<p class="soft empty">${t}</p>`;
   let body;
   if (tab === "clues") {
-    body = clueIds.length
-      ? `<ul class="ncards">${clueIds.map((id) => { const c = K.clues[id];
-          return `<li><button class="ncard" data-act="viewClue" data-id="${id}"><span class="nart">${icon(c.icon)}</span>
-            <span class="ntext"><strong>${esc(c.title)}</strong>${c.tag ? ` <span class="tag">${esc(c.tag)}</span>` : ""}<span class="nbody">${esc(c.text)}</span></span>
-            ${F ? `<span class="code chip">${c.code}</span>` : ""}</button></li>`; }).join("")}</ul>`
-      : empty(F ? "Nothing found yet. Search the rooms." : "No clues yet. The field agent reads you their codes.");
+    body = clueIds.length ? sortBar() + clueGroups(clueIds) : empty(F ? "Nothing found yet. Search the rooms." : "No clues yet. The field agent reads you their codes.");
   } else if (tab === "hints") {
     body = st.hints.length
       ? `<ul class="ncards">${st.hints.map((id) => { const h = K.hints[id]; const found = F && h.spot && st.revealed[K.hiddenSpots[h.spot].id];
@@ -581,10 +616,58 @@ function notebook(tab) {
       ${body}</div>`, { full: true });
 }
 
+// The clue list is a card index: divider tabs choose how the cards are filed.
+const SORTS = { room: "By room", person: "By person", kind: "By kind", found: "As found" };
+const sortsFor = () => (role === "F" ? ["room", "person", "kind", "found"] : ["person", "kind", "found"]);
+function sortMode() {
+  const m = ui.sort || store.get(`sort:${role}`);
+  return sortsFor().includes(m) ? m : role === "F" ? "room" : "found";
+}
+function sortBar() {
+  const m = sortMode();
+  return `<div class="nsort" role="group" aria-label="File the clues">${sortsFor().map((k) => `<button class="divtab ${k === m ? "on" : ""}" aria-pressed="${k === m}" data-act="nbsort" data-sort="${k}">${SORTS[k]}</button>`).join("")}</div>`;
+}
+
+// Kinds go by what a clue looks like; the fixed pieces of the scene are traces, and locks are locks.
+const KIND_OF = {
+  papers: ["will", "photo", "ledger", "bill", "letter", "loveletter", "telegram", "clipping", "paper", "ticket", "sketch", "scrap"],
+  belongings: ["button", "hornbutton", "woodbutton", "hairpin", "stud", "earring", "silverearring", "lapelpin", "tiepin", "handkerchief", "pills", "cigarette", "glove", "key", "cartridge", "speccase", "matches"],
+  objects: WEAPONS.map((w) => w.id),
+};
+const CLUE_KINDS = [["traces", "Traces"], ["papers", "Papers"], ["belongings", "Belongings"], ["objects", "Objects"], ["locks", "Locks"], ["other", "Other"]];
+function kindOf(id) {
+  if (id.startsWith("lock_")) return "locks";
+  if (id === "body" || id === "print" || id === "ash" || id === "stain" || id.startsWith("alibi_")) return "traces";
+  const ic = K.clues[id].icon;
+  return Object.keys(KIND_OF).find((k) => KIND_OF[k].includes(ic)) || "other";
+}
+// A clue files under a person only when its text names them; initials and unnamed belongings stay unfiled.
+const nameRe = (s) => new RegExp(`\\b(${[s.short, s.lib.surname].map((x) => x.replace(/[.]/g, "\\.")).join("|")})\\b`);
+const names = (id, s) => nameRe(s).test(K.clues[id].text);
+
+function clueGroups(ids) {
+  const m = sortMode();
+  let groups;
+  if (m === "room") groups = K.rooms.map((r) => [r.name, ids.filter((id) => WHERE[id] && WHERE[id].room === r.id)]);
+  else if (m === "person") groups = [...K.suspects.map((x) => [x.name, ids.filter((id) => names(id, x)), x]), ["Nobody named", ids.filter((id) => !K.suspects.some((x) => names(id, x)))]];
+  else if (m === "kind") groups = CLUE_KINDS.map(([k, name]) => [name, ids.filter((id) => kindOf(id) === k)]);
+  else return `<ul class="ncards slim">${ids.map(clueCard).join("")}</ul>`;
+  return groups.filter(([, list]) => list.length).map(([name, list, who]) => `<section class="ngroup">
+      <h3 class="divider">${who && role === "I" ? `<span class="face">${portrait(who.lib.look, { mood: st.last[who.id] ? st.last[who.id].mood : "calm", lost: !!who.lost, label: who.name })}</span>` : ""}<span class="dname">${esc(name)}</span><span class="count">${list.length}</span></h3>
+      <ul class="ncards slim">${list.map(clueCard).join("")}</ul></section>`).join("");
+}
+function clueCard(id) {
+  const c = K.clues[id], F = role === "F";
+  return `<li><button class="ncard slim" data-act="viewClue" data-id="${id}"><span class="nart">${icon(c.icon)}</span>
+    <span class="ntext"><strong>${esc(c.title)}</strong>${F ? `<span class="nwhere">${esc(placeOf(id, sortMode() !== "room"))}</span>` : ""}<span class="nsnip">${esc(c.text)}</span></span>
+    ${F ? `<span class="code chip">${c.code}</span>` : ""}</button></li>`;
+}
+
 // One clue from the notebook, shown large.
-function viewClue(id) {
+function viewClue(id, from) {
   const c = K.clues[id];
-  sheet(exhibit(c, { extra: role === "F" ? codePass(c) : "", foot: `<button class="primary wide" data-act="nbtab" data-tab="clues">Back to the notebook</button>` }), { full: true });
+  const foot = from === "tray" ? `<button class="primary wide" data-act="close">Close</button>` : `<button class="primary wide" data-act="nbtab" data-tab="clues">Back to the notebook</button>`;
+  sheet(exhibit(c, { label: role === "F" ? placeOf(id) : "", extra: role === "F" ? codePass(c) : "", foot }), { full: true });
 }
 
 function menu() {
@@ -669,7 +752,13 @@ function onClick(ev) {
     case "menu": menu(); break;
     case "notebook": notebook(); break;
     case "nbtab": notebook(d.tab); break;
-    case "viewClue": viewClue(d.id); break;
+    case "nbsort": {
+      ui.sort = d.sort;
+      store.set(`sort:${role}`, d.sort);
+      notebook("clues");
+      break;
+    }
+    case "viewClue": viewClue(d.id, d.from); break;
     case "inspNext": if (insp) { insp.i++; inspectStep(false); } break;
     case "toAccuse": screen = "accuse"; render(); break;
     case "pick": ui.accuse[d.k] = d.v; render(); break;

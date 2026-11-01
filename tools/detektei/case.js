@@ -97,15 +97,15 @@ export const SUSPECTS = [
     look: { skin: "#e3b48f", hair: "slick", hairColor: "#5b3a22", outfit: "suit", color: "#7a6440", accent: "#c8b27a", extras: ["tie"], token: "lapel" } },
   { id: "bell", temper: "angry", name: "Mrs. Agatha Bell", short: "Mrs. Bell", surname: "Bell", title: "Cook", tone: "red",
     about: "I've cooked for {V} for fifteen years. Never a word of thanks.", voice: "Well! ",
-    token: { name: "a horn button from an apron strap", icon: "button", missing: "One strap of {n}'s apron hangs loose; its horn button is gone." },
+    token: { name: "a horn button from an apron strap", icon: "hornbutton", missing: "One strap of {n}'s apron hangs loose; its horn button is gone." },
     look: { skin: "#e9b08e", hair: "capped", hairColor: "#b8452a", outfit: "apron", color: "#6f8296", accent: "#f4f1ea", extras: [], token: "strap" } },
   { id: "lark", temper: "afraid", name: "Theo Lark", short: "Theo Lark", surname: "Lark", title: "Portrait painter", tone: "black",
     about: "{V} commissioned a portrait. I've been here a month and painted nothing worth keeping.", voice: "Ah. ",
-    token: { name: "a paint-flecked wooden button", icon: "button", missing: "{n}'s painting smock is missing a wooden button near the top." },
+    token: { name: "a paint-flecked wooden button", icon: "woodbutton", missing: "{n}'s painting smock is missing a wooden button near the top." },
     look: { skin: "#c98f6a", hair: "curly", hairColor: "#1e1a19", outfit: "smock", color: "#c46b2b", accent: "#e8d6a8", extras: ["beret", "scarf"], token: "buttons" } },
   { id: "finch", temper: "afraid", name: "Miss Clara Finch", short: "Miss Finch", surname: "Finch", title: "Private secretary", tone: "red",
     about: "I kept {V}'s diary and letters for six years.", voice: "",
-    token: { name: "a small silver earring", icon: "earring", missing: "{n} has a silver earring in one ear only." },
+    token: { name: "a small silver earring", icon: "silverearring", missing: "{n} has a silver earring in one ear only." },
     look: { skin: "#f3d2bb", hair: "bob", hairColor: "#8e3b1f", outfit: "cardigan", color: "#5f8668", accent: "#efe7d3", extras: ["glasses"], token: "earring", earring: "#c8ccd4" } },
   { id: "vance", temper: "angry", name: "Rupert Vance", short: "Vance", surname: "Vance", title: "Business partner", tone: "brown",
     about: "{V} and I built the company together, thirty years ago.", voice: "Frankly? ",
@@ -133,13 +133,13 @@ export const MOTIVES = [
     settled: { title: "Envelope of negatives", icon: "photo", text: "An envelope of photographic negatives, with a note in {V}'s hand: \"Returned to {who}. We are quits.\"" },
     told: "{V} gave those photographs back to {who} last week. I saw the envelope change hands. That business was over.",
     dinner: "{V} made a joke about photographs at dinner. Nobody laughed, {who} least of all." },
-  { id: "debts", label: "Debts", icon: "ledger",
+  { id: "debts", label: "Debts", icon: "bill",
     doc: "An IOU for four thousand pounds, signed by {who}. {V} has written across it: \"Pay by Monday or I call it in.\"",
     admit: "I owed {V} money. A great deal. {VHe} wasn't the forgiving kind.",
-    settled: { title: "Receipt", icon: "ledger", text: "A receipt in {V}'s hand: \"Received from {who} the sum of four thousand pounds. Paid in full.\" It is dated yesterday." },
+    settled: { title: "Receipt", icon: "bill", text: "A receipt in {V}'s hand: \"Received from {who} the sum of four thousand pounds. Paid in full.\" It is dated yesterday." },
     told: "That IOU was paid off. Every penny, yesterday; {V} crowed about it at tea.",
     dinner: "{V} said at dinner that some people in this house owed {Vhim} money. {who} studied the tablecloth." },
-  { id: "jealousy", label: "Jealousy", icon: "letter",
+  { id: "jealousy", label: "Jealousy", icon: "loveletter",
     doc: "A love letter from {V} to the person {who} hoped to marry. It is dated this week.",
     admit: "{V} took the one person I cared about. Just to prove {Vhe} could.",
     settled: { title: "Note", icon: "letter", text: "A note to {V} from the person {who} hoped to marry: \"Please stop writing to me. I have given my word to {who}, and I mean to keep it.\"" },
@@ -244,21 +244,21 @@ const FINDS = [
   { title: "Pawn ticket", icon: "ticket", where: "scw", text: "A pawn ticket in the name of {X}, for a silver pocket watch, from a shop in Brighton.", react: "Times have been hard. I'll redeem the watch when I can." },
   { title: "Unfinished poem", icon: "paper", where: "scw", text: "An unfinished love poem in {X}'s handwriting. It breaks off mid-rhyme.", react: "Poetry isn't a crime. Bad poetry, perhaps." },
   { title: "Torn photograph", icon: "photo", where: "scw", text: "Half of a photograph: a seaside pier, and {X} holding an ice cream.", react: "Brighton, years ago. I tore it in a temper. I don't even remember why." },
-  { title: "Folded note", icon: "letter", where: "scw", text: "A folded note in {X}'s handwriting: \"After dinner. The usual place. Don't be late.\"", react: "That note is about a game of cards. We play every Saturday. Ask anyone." },
+  { title: "Folded note", icon: "paper", where: "scw", text: "A folded note in {X}'s handwriting: \"After dinner. The usual place. Don't be late.\"", react: "That note is about a game of cards. We play every Saturday. Ask anyone." },
   { title: "Diary page", icon: "paper", where: "scw", text: "A page torn from {V}'s diary: \"Must speak to {X} about the money. This cannot go on.\"", react: "{V} lent me money years ago, and I paid every penny back. Whatever {V} wrote, that matter was closed." },
-  { title: "Telegram", icon: "letter", where: "scw", text: "A telegram to {X}: \"ARRIVING TUESDAY STOP SAY NOTHING TO ANYONE STOP\"", react: "My brother is coming to visit, and the family can't stand him. That's all it is." },
+  { title: "Telegram", icon: "telegram", where: "scw", text: "A telegram to {X}: \"ARRIVING TUESDAY STOP SAY NOTHING TO ANYONE STOP\"", react: "My brother is coming to visit, and the family can't stand him. That's all it is." },
   { title: "Pill box", icon: "pills", where: "sc", text: "An empty pill box from a London chemist, made out to {X}. \"Two at bedtime.\"", react: "Sleeping pills. I haven't slept properly in years. Is that a crime now?" },
-  { title: "Jeweller's bill", icon: "ledger", where: "scw", text: "An unpaid bill from a Bond Street jeweller, made out to {X}: one diamond brooch.", react: "A gift for someone dear to me. I'll pay it when I can." },
-  { title: "Slashed sketch", icon: "paper", where: "scw", text: "A charcoal sketch of {V}, slashed through twice. It is signed with the initial {I}.", react: "I spoiled the drawing and lost my temper with it. With the drawing, mind you." },
+  { title: "Jeweller's bill", icon: "bill", where: "scw", text: "An unpaid bill from a Bond Street jeweller, made out to {X}: one diamond brooch.", react: "A gift for someone dear to me. I'll pay it when I can." },
+  { title: "Slashed sketch", icon: "sketch", where: "scw", text: "A charcoal sketch of {V}, slashed through twice. It is signed with the initial {I}.", react: "I spoiled the drawing and lost my temper with it. With the drawing, mind you." },
   { title: "Brass key", icon: "key", where: "scf", text: "A small brass key on a ribbon, labelled \"Gatehouse\" in {X}'s handwriting.", react: "I borrowed it weeks ago to fetch the deck chairs, and forgot to give it back." },
   { title: "Revolver cartridge", icon: "cartridge", where: "scf", text: "A single unfired revolver cartridge, wrapped in a sheet of {X}'s letter paper.", react: "My father's. I keep it for luck. The revolver went to a museum years ago." },
   { title: "Railway timetable", icon: "paper", where: "scw", text: "A railway timetable with the 11:15 night train circled in red. {X}'s name is written on the cover.", react: "I like to know my way out of a place. An old habit." },
   { title: "Racing slip", icon: "ticket", where: "scw", text: "A betting slip in {X}'s name: ten pounds on Lucky Lad, the 3:30 at Epsom. Lucky Lad came last.", react: "A harmless flutter. A losing one, as you can see." },
-  { title: "Burnt scrap", icon: "clipping", where: "scf", text: "A scrap of burnt paper in {X}'s handwriting. Only a few words are left: \"...will never forgive...\"", react: "A letter to my sister that I thought better of sending. We don't get on." },
-  { title: "Love letter", icon: "letter", where: "scw", text: "A love letter to {X}, unsigned. The handwriting is shaky.", react: "That letter is private, and it has nothing to do with {V}. Put it away." },
+  { title: "Burnt scrap", icon: "scrap", where: "scf", text: "A scrap of burnt paper in {X}'s handwriting. Only a few words are left: \"...will never forgive...\"", react: "A letter to my sister that I thought better of sending. We don't get on." },
+  { title: "Love letter", icon: "loveletter", where: "scw", text: "A love letter to {X}, unsigned. The handwriting is shaky.", react: "That letter is private, and it has nothing to do with {V}. Put it away." },
   { title: "Letter of complaint", icon: "letter", where: "scw", text: "A letter from {X} to {V}, complaining about the draughts in the guest rooms. Three pages long.", react: "The draughts in this house are criminal. That's the only crime I've ever accused anyone of." },
   { title: "Stained handkerchief", icon: "handkerchief", where: "scf", presence: true, text: "A handkerchief embroidered with the letter {I}, with a few spots of dried blood.", react: "A nosebleed, days ago. The damp in this house gives me nosebleeds." },
-  { title: "Spectacle case", icon: "paper", where: "scf", presence: true, text: "An empty spectacle case. The initial {I} is stamped on the lid.", react: "Oh, there it is. I've been looking for that case all week." },
+  { title: "Spectacle case", icon: "speccase", where: "scf", presence: true, text: "An empty spectacle case. The initial {I} is stamped on the lid.", react: "Oh, there it is. I've been looking for that case all week." },
   { title: "Single glove", icon: "glove", where: "scf", presence: true, text: "A single leather driving glove with the initial {I} stamped inside the cuff.", react: "I lost that glove days ago. I've been driving one-handed ever since." },
   { title: "Cigarette end", icon: "cigarette", where: "sf", presence: true, text: "A cigarette end with a gold band: {X}'s brand. Nobody else in the house smokes them.", react: "I smoke where I please. That one's old, as you can see." },
 ];
@@ -365,7 +365,7 @@ export const KINDS = {
       { id: "top", label: "Upper shelves", r: [0.06, 0.04, 0.88, 0.44], tag: "c", flavor: ["Rows of leather-bound sermons and atlases. Nothing tucked between them.", "Travel diaries, pressed flowers in a few. Nothing else."] },
       { id: "low", label: "Lower shelves", r: [0.06, 0.52, 0.88, 0.44], tag: "c", flavor: ["Old magazines and a chess set with a missing knight.", "Bound volumes of Punch, in order."] },
     ],
-    activity: { part: "top", act: "looking for a book to read", title: "Bookshelf", yes: "One book has been pulled out and pushed back crooked, leaving a clean gap in the dust. Someone was browsing here tonight.", no: "The books stand in tight rows under an even film of dust. Not one has been taken out in weeks." },
+    activity: { part: "top", act: "looking for a book to read", title: "Bookshelf", icon: "books", yes: "One book has been pulled out and pushed back crooked, leaving a clean gap in the dust. Someone was browsing here tonight.", no: "The books stand in tight rows under an even film of dust. Not one has been taken out in weeks." },
     hidden: { label: "Loose back panel", r: [0.56, 0.08, 0.32, 0.18], phrase: "behind a loose panel at the back of a bookshelf", found: "behind a loose panel at the back of the bookshelf" },
   },
   desk: {
@@ -374,7 +374,7 @@ export const KINDS = {
       { id: "top", label: "Desktop", r: [0.02, 0, 0.96, 0.22], tag: "s", flavor: ["A blotter, a pen tray and a brass lamp.", "A pile of unopened bills, squared neatly."] },
       { id: "drawer", label: "Drawer", r: [0.08, 0.26, 0.4, 0.22], tag: "c", flavor: ["Envelopes, stamps and a stick of sealing wax.", "Paper clips and a broken fountain pen."] },
     ],
-    activity: { part: "top", act: "writing letters at the desk", title: "Inkwell", yes: "The ink in the well is fresh, and the blotter shows a few lines in mirror writing. Someone wrote letters here tonight.", no: "The inkwell has dried to a crust and the blotter is spotless. Nobody wrote anything here tonight." },
+    activity: { part: "top", act: "writing letters at the desk", title: "Inkwell", icon: "inkwell", yes: "The ink in the well is fresh, and the blotter shows a few lines in mirror writing. Someone wrote letters here tonight.", no: "The inkwell has dried to a crust and the blotter is spotless. Nobody wrote anything here tonight." },
     hidden: { label: "False drawer bottom", r: [0.52, 0.26, 0.4, 0.22], phrase: "under the false bottom of a desk drawer", found: "under the false bottom of the desk drawer" },
   },
   fireplace: {
@@ -383,7 +383,7 @@ export const KINDS = {
       { id: "mantel", label: "Mantelpiece", r: [0, 0, 1, 0.16], tag: "s", flavor: ["A carriage clock and two china dogs.", "Invitations propped behind a pair of candles."] },
       { id: "grate", label: "Grate", r: [0.24, 0.4, 0.52, 0.56], tag: "f", flavor: ["Ash and the charred stub of a log.", "Grey ash. Nothing in it but ash."] },
     ],
-    activity: { part: "grate", act: "sitting by the fire", title: "Fire grate", yes: "Embers still glow under the ash. A fire burned here this evening.", no: "The grate is cold and swept clean. No fire was lit here tonight." },
+    activity: { part: "grate", act: "sitting by the fire", title: "Fire grate", icon: "grate", yes: "Embers still glow under the ash. A fire burned here this evening.", no: "The grate is cold and swept clean. No fire was lit here tonight." },
     hidden: { label: "Smoke shelf", r: [0.3, 0.2, 0.4, 0.16], phrase: "up a chimney, on the smoke shelf", found: "up the chimney, on the smoke shelf" },
   },
   armchair: {
@@ -391,7 +391,7 @@ export const KINDS = {
     parts: [
       { id: "seat", label: "Between the cushions", r: [0.12, 0.38, 0.76, 0.28], tag: "c", flavor: ["A lost sixpence and some biscuit crumbs.", "A hairpin. No, a bent paper clip."] },
     ],
-    activity: { part: "seat", act: "dozing in the armchair", title: "Armchair cushions", yes: "The cushions are flattened and still hold the shape of someone who sat here a long while tonight.", no: "The cushions are plump and perfectly smooth. Nobody has sat here for hours." },
+    activity: { part: "seat", act: "dozing in the armchair", title: "Armchair cushions", icon: "cushion", yes: "The cushions are flattened and still hold the shape of someone who sat here a long while tonight.", no: "The cushions are plump and perfectly smooth. Nobody has sat here for hours." },
     hidden: { label: "Slit in the lining", r: [0.1, 0.72, 0.8, 0.22], phrase: "in a slit in the lining underneath an armchair", found: "in a slit in the lining under the armchair" },
   },
   rug: {
@@ -405,7 +405,7 @@ export const KINDS = {
       { id: "curtain", label: "Curtains", r: [0, 0.1, 0.22, 0.9], tag: "c", flavor: ["Heavy velvet. A moth flutters out.", "Dusty velvet with a faded pattern of pheasants."] },
       { id: "sill", label: "Windowsill", r: [0.22, 0.86, 0.56, 0.14], tag: "s", flavor: ["A dead fly and a view of the rain.", "A potted geranium, slightly dry."] },
     ],
-    activity: { part: "sill", act: "watching the storm from the window", title: "Window pane", yes: "A clear patch has been wiped in the fogged glass at head height. Someone stood here looking out.", no: "The window is fogged over from inside, and nobody has wiped a spot clear. Nobody stood here looking out." },
+    activity: { part: "sill", act: "watching the storm from the window", title: "Window pane", icon: "windowpane", yes: "A clear patch has been wiped in the fogged glass at head height. Someone stood here looking out.", no: "The window is fogged over from inside, and nobody has wiped a spot clear. Nobody stood here looking out." },
     hidden: { label: "Hollow pelmet", r: [0, 0, 1, 0.1], phrase: "in the hollow pelmet box above some curtains", found: "in the hollow pelmet above the curtains" },
   },
   painting: {
@@ -420,7 +420,7 @@ export const KINDS = {
       { id: "stand", label: "Music stand", r: [0.3, 0.06, 0.4, 0.28], tag: "s", flavor: ["Sheet music for a Strauss waltz.", "A book of hymns, open at the funeral march. Cheerful."] },
       { id: "bench", label: "Piano bench", r: [0.32, 0.72, 0.36, 0.28], tag: "c", flavor: ["Old song books and a tuning fork.", "Under the lid: a tin of rosin and a pencil."] },
     ],
-    activity: { part: "keys", act: "playing the piano", title: "Piano keyboard", yes: "The keyboard lid is open and a waltz stands on the music stand, its pages turned. Someone played tonight.", no: "The keyboard lid is locked, and its key hangs on a hook under a film of dust. Nobody played tonight." },
+    activity: { part: "keys", act: "playing the piano", title: "Piano keyboard", icon: "pianokeys", yes: "The keyboard lid is open and a waltz stands on the music stand, its pages turned. Someone played tonight.", no: "The keyboard lid is locked, and its key hangs on a hook under a film of dust. Nobody played tonight." },
     hidden: { label: "Inside the piano", r: [0.06, 0.06, 0.22, 0.28], phrase: "inside a piano, under the lid", found: "inside the piano, under the lid" },
   },
   clock: {
@@ -450,7 +450,7 @@ export const KINDS = {
       { id: "spread", label: "Bedspread", r: [0.32, 0.18, 0.64, 0.4], tag: "s", flavor: ["A heavy embroidered bedspread.", "Quilted silk, slightly faded."] },
       { id: "under", label: "Under the bed", r: [0.04, 0.7, 0.92, 0.3], tag: "f", flavor: ["A pair of slippers and a lot of dust.", "A chamber pot. Empty, thankfully."] },
     ],
-    activity: { part: "spread", act: "lying down with a headache", title: "Bedspread", yes: "The bedspread is creased and the pillow dented. Someone lay here this evening.", no: "The bedspread is crisp and tightly tucked in. Nobody has lain here tonight." },
+    activity: { part: "spread", act: "lying down with a headache", title: "Bedspread", icon: "bedspread", yes: "The bedspread is creased and the pillow dented. Someone lay here this evening.", no: "The bedspread is crisp and tightly tucked in. Nobody has lain here tonight." },
     hidden: { label: "Slit in the mattress", r: [0.32, 0.46, 0.4, 0.14], phrase: "sewn into a slit in a mattress", found: "sewn into a slit in the mattress" },
   },
   vanity: {
@@ -468,7 +468,7 @@ export const KINDS = {
       { id: "top", label: "Top", r: [0, 0, 1, 0.3], tag: "s", flavor: ["Decanters of sherry and port.", "A silver tray and a fruit bowl."] },
       { id: "cupboard", label: "Cupboard", r: [0.06, 0.38, 0.42, 0.56], tag: "c", flavor: ["The good china, stacked high.", "Table linen and napkin rings."] },
     ],
-    activity: { part: "top", act: "pouring myself a nightcap", title: "Decanters", yes: "The port is down by a glass, and a sticky glass stands beside the decanter. Someone poured a drink here.", no: "The decanters are full to the stopper and every glass is polished dry. Nobody poured a drink here." },
+    activity: { part: "top", act: "pouring myself a nightcap", title: "Decanters", icon: "decanter", yes: "The port is down by a glass, and a sticky glass stands beside the decanter. Someone poured a drink here.", no: "The decanters are full to the stopper and every glass is polished dry. Nobody poured a drink here." },
     hidden: { label: "Behind the cupboard's back wall", r: [0.52, 0.38, 0.42, 0.56], phrase: "behind the back wall of a sideboard cupboard", found: "behind the back wall of the sideboard cupboard" },
   },
   table: {
@@ -477,7 +477,7 @@ export const KINDS = {
       { id: "top", label: "Table top", r: [0, 0, 1, 0.2], tag: "s", flavor: ["A bowl of wax fruit and a lace runner.", "Breadcrumbs and a folded newspaper."] },
       { id: "under", label: "Under the table", r: [0.06, 0.3, 0.88, 0.7], tag: "f", flavor: ["A dropped napkin.", "Nothing but table legs and a cat's toy."] },
     ],
-    activity: { part: "top", act: "playing patience at the table", title: "Playing cards", yes: "A game of patience is laid out on the table, half finished.", no: "The table is bare and the only pack of cards in the room is still sealed in its wrapper." },
+    activity: { part: "top", act: "playing patience at the table", title: "Playing cards", icon: "cards", yes: "A game of patience is laid out on the table, half finished.", no: "The table is bare and the only pack of cards in the room is still sealed in its wrapper." },
     hidden: { label: "Drawer under the tabletop", r: [0.3, 0.2, 0.4, 0.1], phrase: "in a hidden drawer under a tabletop", found: "in the hidden drawer under the tabletop" },
   },
   stove: {
@@ -486,7 +486,7 @@ export const KINDS = {
       { id: "hob", label: "Hob", r: [0, 0, 1, 0.18], tag: "s", flavor: ["A kettle and a heavy iron pan.", "A stockpot, simmering bones for tomorrow."] },
       { id: "oven", label: "Oven", r: [0.08, 0.3, 0.5, 0.42], tag: "c", flavor: ["Empty and still faintly warm.", "A tray of burnt scones, forgotten."] },
     ],
-    activity: { part: "hob", act: "making a cup of cocoa", title: "Milk pan", yes: "The milk pan sits on the hob with a skin of cocoa in it, still faintly warm.", no: "The milk pan hangs clean and dry on its hook, and the cocoa tin is still sealed." },
+    activity: { part: "hob", act: "making a cup of cocoa", title: "Milk pan", icon: "milkpan", yes: "The milk pan sits on the hob with a skin of cocoa in it, still faintly warm.", no: "The milk pan hangs clean and dry on its hook, and the cocoa tin is still sealed." },
     hidden: { label: "Ash pit", r: [0.62, 0.76, 0.32, 0.2], phrase: "in the ash pit under a kitchen range", found: "in the ash pit under the range" },
   },
   pantry: {
@@ -500,7 +500,7 @@ export const KINDS = {
   winerack: {
     label: "Wine rack",
     parts: [{ id: "rack", label: "Bottles", r: [0.04, 0.04, 0.92, 0.7], tag: "c", flavor: ["Claret, mostly, and a few dusty ports.", "Hock and champagne, laid down years ago."] }],
-    activity: { part: "rack", act: "choosing a wine for tomorrow's lunch", title: "Wine bottles", yes: "Fresh fingermarks in the dust on several bottles, and one bottle pulled half out. Someone was choosing wine here.", no: "Dust lies thick and unbroken on every bottle. Nobody has touched these racks in weeks." },
+    activity: { part: "rack", act: "choosing a wine for tomorrow's lunch", title: "Wine bottles", icon: "bottle", yes: "Fresh fingermarks in the dust on several bottles, and one bottle pulled half out. Someone was choosing wine here.", no: "Dust lies thick and unbroken on every bottle. Nobody has touched these racks in weeks." },
     hidden: { label: "Gap behind the rack", r: [0.04, 0.78, 0.92, 0.18], phrase: "in a gap behind a wine rack", found: "in the gap behind the wine rack" },
   },
   barrel: {
@@ -514,7 +514,7 @@ export const KINDS = {
       { id: "cloth", label: "Table", r: [0, 0, 1, 0.42], tag: "s", flavor: ["Green baize, brushed smooth.", "A small burn mark near one corner."] },
       { id: "pockets", label: "Pockets", r: [0, 0.42, 1, 0.16], tag: "c", flavor: ["A red ball and a lot of chalk dust.", "Empty leather pockets."] },
     ],
-    activity: { part: "cloth", act: "practising at the billiard table", title: "Billiard balls", yes: "The balls are scattered across the baize and one cue has fresh chalk on its tip. Someone was practising tonight.", no: "The balls sit racked in their triangle and the chalk is untouched. No game was played tonight." },
+    activity: { part: "cloth", act: "practising at the billiard table", title: "Billiard balls", icon: "balls", yes: "The balls are scattered across the baize and one cue has fresh chalk on its tip. Someone was practising tonight.", no: "The balls sit racked in their triangle and the chalk is untouched. No game was played tonight." },
     hidden: { label: "Under the slate", r: [0.3, 0.62, 0.4, 0.2], phrase: "wedged under the slate of a billiard table", found: "wedged under the slate of the billiard table" },
   },
   cuerack: {
@@ -527,7 +527,7 @@ export const KINDS = {
       { id: "pots", label: "Flowerpots", r: [0.04, 0, 0.6, 0.26], tag: "c", flavor: ["Seedlings in neat rows, labelled in pencil.", "Cuttings of geranium, rooting in jars."] },
       { id: "tools", label: "Tools", r: [0.66, 0, 0.3, 0.26], tag: "s", flavor: ["A trowel, twine and a pair of gloves.", "Secateurs and a watering can."] },
     ],
-    activity: { part: "pots", act: "repotting the orchids", title: "Orchid pots", yes: "Damp, fresh soil in two orchid pots and a muddy trowel on the bench. Someone repotted here tonight.", no: "The soil in every pot is dry and crusted, and the trowel is clean. Nobody repotted anything tonight." },
+    activity: { part: "pots", act: "repotting the orchids", title: "Orchid pots", icon: "flowerpot", yes: "Damp, fresh soil in two orchid pots and a muddy trowel on the bench. Someone repotted here tonight.", no: "The soil in every pot is dry and crusted, and the trowel is clean. Nobody repotted anything tonight." },
     hidden: { label: "Under the sack of soil", r: [0.1, 0.62, 0.8, 0.34], phrase: "under a sack of potting soil", found: "under the sack of potting soil" },
   },
   palm: {
@@ -538,7 +538,7 @@ export const KINDS = {
   birdcage: {
     label: "Birdcage",
     parts: [{ id: "cage", label: "Birdcage", r: [0.04, 0.02, 0.92, 0.34], tag: "c", flavor: ["A canary, asleep with its head under a wing.", "A canary on its swing, watching you with one bright eye."] }],
-    activity: { part: "cage", act: "feeding the canary", title: "Seed cup", yes: "The seed cup is full of fresh seed and the water dish is topped up. Someone fed the bird tonight.", no: "The seed cup holds nothing but empty husks and the water dish is nearly dry. Nobody has fed the bird since morning." },
+    activity: { part: "cage", act: "feeding the canary", title: "Seed cup", icon: "seeddish", yes: "The seed cup is full of fresh seed and the water dish is topped up. Someone fed the bird tonight.", no: "The seed cup holds nothing but empty husks and the water dish is nearly dry. Nobody has fed the bird since morning." },
     hidden: { label: "Under the sand tray", r: [0.04, 0.36, 0.92, 0.08], phrase: "under the sand tray of a birdcage", found: "under the sand tray of the birdcage" },
   },
   sofa: {
@@ -548,7 +548,7 @@ export const KINDS = {
   gramophone: {
     label: "Gramophone",
     parts: [{ id: "record", label: "Gramophone", r: [0, 0, 1, 1], tag: "s", flavor: ["A record of dance music, scratched.", "The horn is dented. A stack of records beside it."] }],
-    activity: { part: "record", act: "listening to records", title: "Gramophone", yes: "A record lies on the turntable and the needle arm is out of its rest. Someone was listening to records.", no: "The needle arm is clamped in its rest and every record is in its sleeve, filed away." },
+    activity: { part: "record", act: "listening to records", title: "Gramophone", icon: "gramophone", yes: "A record lies on the turntable and the needle arm is out of its rest. Someone was listening to records.", no: "The needle arm is clamped in its rest and every record is in its sleeve, filed away." },
   },
   chest: {
     label: "Blanket chest",
@@ -813,18 +813,18 @@ function build(code, attempt) {
   addClue("body", { title: "The victim", icon: "watch", text: bodyText });
 
   for (const s of suspects) {
-    addClue(`alibi_${s.id}`, { title: s.claim.act.title, icon: "magnifier", text: there(s) ? s.claim.act.yes : s.claim.act.no });
+    addClue(`alibi_${s.id}`, { title: s.claim.act.title, icon: s.claim.act.icon, text: there(s) ? s.claim.act.yes : s.claim.act.no });
     for (const m of [s.motive, s.settled]) addClue(`motive_${s.id}_${m.id}`, { title: "Private papers", icon: m.icon, text: f(m.doc, { who: nm(s), surname: s.lib.surname }) });
   }
   const slow = core === "poison" ? " The label warns that it works slowly: death follows within the hour." : "";
   addClue("weapon", { title: cap(weapon.name), icon: weapon.id, text: `${cap(an(weapon.name))} with ${weapon.mark}, hidden ${spotWeapon.hiddenDef.found}: ${weapon.trace}.${slow}${traceVal.hair ? ` Caught on it is ${HAIR_WORD[traceVal.hair]}.` : ""}` });
   const decoySpot = R.int(5) < 2 && spareSpots.length ? spareSpots.pop() : null;
   addClue("decoy", { title: cap(decoy.name), icon: decoy.id, text: `${cap(an(decoy.name))} with ${decoy.mark}${decoySpot ? `, tucked away ${decoySpot.hiddenDef.found}` : ""}. It has been moved today: a clean ring in the dust shows where it usually stands.` });
-  if (core === "moved") addClue("stain", { title: "Scrubbed stain", icon: "magnifier", text: "A patch scrubbed almost white, still damp and smelling of carbolic soap. A rusty rim remains in the cracks. Somebody cleaned up here tonight." });
+  if (core === "moved") addClue("stain", { title: "Scrubbed stain", icon: "brush", text: "A patch scrubbed almost white, still damp and smelling of carbolic soap. A rusty rim remains in the cracks. Somebody cleaned up here tonight." });
   const shoe = traceVal.shoes && SHOES.find((x) => x.id === traceVal.shoes);
   const smoke = traceVal.smoke && SMOKES.find((x) => x.id === traceVal.smoke);
-  if (shoe) addClue("print", { title: "Footprint", icon: "magnifier", text: `In a smear of spilt ${R.pick(["port", "ash", "soil from an upset plant"])} right beside the body: ${shoe.print}. It is fresh.` });
-  if (smoke) addClue("ash", { title: "Ash", icon: "cigarette", text: `On the floor of the ${rn(S)}, where nobody has swept since the murder: ${smoke.ash}.` });
+  if (shoe) addClue("print", { title: "Footprint", icon: "shoe", text: `In a smear of spilt ${R.pick(["port", "ash", "soil from an upset plant"])} right beside the body: ${shoe.print}. It is fresh.` });
+  if (smoke) addClue("ash", { title: "Ash", icon: "ash", text: `On the floor of the ${rn(S)}, where nobody has swept since the murder: ${smoke.ash}.` });
 
   // ---------- deductions ----------
   // When the murder happened: the watch, unless a twist makes it lie.
@@ -1339,6 +1339,28 @@ export function makeCase(code) {
     if (!validate(k).length) { cache.set(code, k); return k; }
   }
   throw new Error(`No solvable case for ${code}`);
+}
+
+// Where each clue lies: clue id -> { room, at, path }. at is the spot the field agent examines (a leaf, a locked
+// leaf or a hidden place); path holds the labels from the furniture down to that spot. A locked leaf holds two
+// clues: the lock itself and the paper inside.
+export function clueSpots(k) {
+  const out = {};
+  for (const room of k.rooms) {
+    const go = (n, path) => {
+      const here = path.length && path[path.length - 1] === n.label ? path : [...path, n.label];
+      if (n.children && n.children.length) return n.children.forEach((ch) => go(ch, here));
+      const c = k.content[n.id];
+      const ids = !c ? [] : c.lock ? [k.locks[c.lock].lockClue, k.locks[c.lock].clue] : c.clue ? [c.clue] : [];
+      for (const id of ids) out[id] = { room: room.id, at: n.id, path: here };
+    };
+    room.furniture.forEach((f) => go(f, []));
+  }
+  for (const h of Object.values(k.hiddenSpots)) {
+    const f = k.rooms.find((r) => r.id === h.room).furniture.find((x) => x.id === h.furniture);
+    out[h.clue] = { room: h.room, at: h.id, path: [f.label, h.label] };
+  }
+  return out;
 }
 
 // Looks up a code the player typed. Returns { kind: "clue" | "hint", item } or null.

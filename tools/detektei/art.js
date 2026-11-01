@@ -497,6 +497,7 @@ export function portrait(look, o = {}) {
 }
 
 // ---------- icons (64 x 64) ----------
+// ICON_NAMES (exported below) lets the tests check that every clue names a picture that exists.
 const ink = "#2a2320", paper = "#efe6cf", gold = "#d8b45a", steel = "#b8bec6";
 const ICONS = {
   watch: c(32, 34, 18, gold) + c(32, 34, 14, paper) + l(32, 34, 32, 24, ink, 2) + l(32, 34, 40, 36, ink, 2) + p("M22 26l20 16M24 42l16-18", "none", `stroke="#8a8a8a" stroke-width="1"`) + r(28, 12, 8, 5, gold),
@@ -504,22 +505,32 @@ const ICONS = {
   will: p("M14 8h28l8 8v40H14z", paper) + p("M42 8v8h8", "#d8ccb0") + [18, 24, 30, 36].map((y) => l(20, y, 44, y, "#8a7f6a", 1.5)).join("") + c(38, 48, 6, "#b3261e") + p("M34 52l-3 8 4-2 3 3 1-8", "#b3261e"),
   photo: r(10, 14, 44, 36, "#f4efe2", `transform="rotate(-6 32 32)"`) + r(14, 18, 36, 24, "#5a6670", `transform="rotate(-6 32 32)"`) + c(28, 28, 5, "#c9b9a0", `transform="rotate(-6 32 32)"`) + p("M18 40l10-8 8 6 6-4 6 6z", "#3a444c", `transform="rotate(-6 32 32)"`),
   ledger: r(12, 10, 40, 46, "#5a2a1e", `rx="2"`) + r(16, 14, 34, 38, paper) + [20, 26, 32, 38, 44].map((y) => l(20, y, 46, y, "#8a9ab0", 1)).join("") + l(36, 16, 36, 50, "#c9433a", 1) + p("M22 30l6 6M28 30l-6 6", "none", `stroke="#c9433a" stroke-width="1.6"`),
-  letter: r(8, 16, 48, 32, paper) + p("M8 16l24 18 24-18", "none", `stroke="#a89a7a" stroke-width="2"`) + p("M32 40a4 4 0 0 1 6-5a4 4 0 0 1 6 5l-6 6z", "#c9433a"),
+  letter: r(8, 16, 48, 32, paper) + p("M8 16l24 18 24-18", "none", `stroke="#a89a7a" stroke-width="2"`) + c(32, 36, 5.5, "#b3261e") + c(32, 36, 3, "none", `stroke="#7a1a14" stroke-width="1"`),
+  loveletter: r(8, 16, 48, 32, paper) + p("M8 16l24 18 24-18", "none", `stroke="#a89a7a" stroke-width="2"`) + p("M32 40a4 4 0 0 1 6-5a4 4 0 0 1 6 5l-6 6z", "#c9433a"),
+  telegram: r(8, 10, 48, 44, "#f1e3aa", `rx="2"`) + `<text x="32" y="19" font-size="7" text-anchor="middle" fill="#8b2b22" font-family="serif" font-weight="700" letter-spacing=".6">TELEGRAM</text>` + l(12, 22, 52, 22, "#8b2b22", 1) + r(12, 27, 40, 7, "#fbf7ea") + r(12, 38, 32, 7, "#fbf7ea") + l(14, 30.5, 49, 30.5, ink, 1.6, `stroke-dasharray="4 1.5"`) + l(14, 41.5, 41, 41.5, ink, 1.6, `stroke-dasharray="4 1.5"`),
+  bill: p("M18 6h28v52l-3.5-3-3.5 3-3.5-3-3.5 3-3.5-3-3.5 3-3.5-3-3.5 3z", paper) + [14, 20, 26, 32].map((y) => l(22, y, 34, y, "#8a7f6a", 1.5) + l(37, y, 42, y, "#8a7f6a", 1.5)).join("") + l(36, 38, 43, 38, ink, 1) + l(36, 40, 43, 40, ink, 1) + `<text x="23" y="47" font-size="10" fill="${ink}" font-family="serif">£</text>`,
+  scrap: p("M14 12l10 3 8-4 10 5 8-2-2 10 4 8-3 10 3 9-10-2-8 5-9-4-9 3 2-10-4-9 3-10z", "#e6dbbf", `stroke="#3a2414" stroke-width="3" stroke-linejoin="round"`) + [26, 33].map((y) => l(20, y, 42, y, "#8a7f6a", 1.5)).join("") + c(46, 46, 4, "#3a2414", `opacity=".55"`) + c(18, 20, 3, "#3a2414", `opacity=".45"`),
+  sketch: r(12, 6, 40, 52, paper) + e(32, 25, 9, 11, "none", `stroke="#3a3a3a" stroke-width="1.6"`) + p("M18 54q2-16 14-17q12 1 14 17", "none", `stroke="#3a3a3a" stroke-width="1.6"`) + p("M15 15L49 47M19 9L51 39", "none", `stroke="#2a2320" stroke-width="2.6" stroke-linecap="round"`) + p("M16 13L50 45M20 7L52 37", "none", `stroke="#fbf7ea" stroke-width=".8"`),
+  speccase: e(32, 34, 25, 12, "#2f3a4a") + p("M7 33Q32 26 57 33", "none", `stroke="#1a222c" stroke-width="1.5"`) + p("M14 28Q32 22 50 28", "none", `stroke="#5a6a80" stroke-width="1.2" opacity=".7"`) + r(29, 31, 6, 4, gold, `rx="1"`),
   clipping: p("M12 10h40l-3 6 3 6-3 6 3 6-3 6 3 6-3 6 3 6H12z", "#ddd3b8") + r(16, 14, 30, 6, ink) + [26, 31, 36, 41, 46].map((y) => l(16, y, 44, y, "#7a7060", 2)).join("") + e(32, 34, 14, 8, "none", `stroke="#b3261e" stroke-width="2"`),
   paper: p("M14 8h30l6 6v42H14z", paper) + [18, 24, 30, 36, 42].map((y) => l(20, y, 44, y, "#8a7f6a", 1.5)).join(""),
   matches: r(14, 12, 36, 40, "#1f3a6b", `rx="3"`) + r(14, 40, 36, 12, "#c9433a") + r(14, 38, 36, 2, gold) + p("M28 30q2-7 8-7q-2 3 0 4q-4 0-5 3z", "#4a8ac9") + `<text x="32" y="20.5" font-size="6.5" text-anchor="middle" fill="${gold}" font-family="serif" letter-spacing=".3">BLUE</text><text x="32" y="35.5" font-size="6" text-anchor="middle" fill="${gold}" font-family="serif" letter-spacing=".3">PARROT</text>`,
   ticket: p("M8 20h48v8a4 4 0 0 0 0 8v8H8v-8a4 4 0 0 0 0-8z", "#e8d9a8") + l(20, 20, 20, 44, "#8a7a4a", 1, `stroke-dasharray="2 2"`) + `<text x="38" y="35" font-size="8" text-anchor="middle" fill="#6a5a2a" font-family="serif">No. 615</text>`,
   button: c(32, 32, 16, gold, `stroke="#8a6a2a" stroke-width="2"`) + c(27, 28, 2.4, "#6a4a1a") + c(37, 28, 2.4, "#6a4a1a") + c(27, 37, 2.4, "#6a4a1a") + c(37, 37, 2.4, "#6a4a1a"),
+  hornbutton: c(32, 32, 16, "#cdb88c", `stroke="#7a6a4a" stroke-width="2"`) + c(32, 32, 11, "none", `stroke="#a8946a" stroke-width="1"`) + c(28, 32, 2.4, "#5a4a2a") + c(36, 32, 2.4, "#5a4a2a"),
+  woodbutton: c(32, 32, 16, "#a8784a", `stroke="#6a4626" stroke-width="2"`) + c(27, 28, 2.4, "#4a2e16") + c(37, 28, 2.4, "#4a2e16") + c(27, 37, 2.4, "#4a2e16") + c(37, 37, 2.4, "#4a2e16") + c(22, 40, 1.6, "#3a6a9a") + c(42, 22, 1.3, "#c9433a") + c(40, 44, 1.1, "#e8d080"),
   hairpin: p("M16 50L46 14", "none", `stroke="#8a5a2a" stroke-width="5" stroke-linecap="round"`) + p("M22 52L52 18", "none", `stroke="#a8743a" stroke-width="4" stroke-linecap="round"`) + c(48, 15, 5, "#c99a5a"),
   stud: c(32, 32, 12, "#f4efe2", `stroke="#bbb" stroke-width="2"`) + c(28, 28, 3, "#fff") + l(32, 44, 32, 54, steel, 3),
   earring: l(32, 10, 32, 26, steel, 2) + c(32, 10, 4, "none", `stroke="${steel}" stroke-width="2"`) + c(32, 36, 11, "#f4efe2", `stroke="#ccc" stroke-width="1"`) + c(28, 32, 3, "#fff"),
+  silverearring: l(32, 8, 32, 20, steel, 2) + c(32, 8, 3.5, "none", `stroke="${steel}" stroke-width="2"`) + c(32, 34, 13, "none", `stroke="${steel}" stroke-width="3.5"`) + p("M23 26a12 12 0 0 1 8-5", "none", `stroke="#fff" stroke-width="1.2"`),
   lapelpin: p("M20 48a14 14 0 1 1 24 0l-5 0a9 9 0 1 0-14 0z", gold) + [0, 1, 2, 3, 4, 5].map((i) => c(32 + 13 * Math.cos(Math.PI * (0.9 + i * 0.24)), 38 + 13 * Math.sin(Math.PI * (0.9 + i * 0.24)), 1.3, "#6a4a1a")).join(""),
   tiepin: r(10, 28, 44, 8, gold, `rx="3"`) + c(46, 32, 4, "#b3261e"),
-  handkerchief: p("M12 14l40-4 2 40-40 4z", "#f4efe2", `stroke="#d8cfb8" stroke-width="1.5"`) + c(26, 26, 2.4, "#9a2a22") + c(31, 30, 1.6, "#9a2a22") + c(36, 24, 1.8, "#9a2a22") + `<text x="40" y="48" font-size="10" fill="#4a5a8a" font-family="serif" font-style="italic">A</text>`,
+  handkerchief: p("M12 14l40-4 2 40-40 4z", "#f4efe2", `stroke="#d8cfb8" stroke-width="1.5"`) + c(26, 26, 2.4, "#9a2a22") + c(31, 30, 1.6, "#9a2a22") + c(36, 24, 1.8, "#9a2a22") + p("M38 47q2-7 7-5t-1 6q-4 2-5-2q1-3 5-4", "none", `stroke="#4a5a8a" stroke-width="1.5" stroke-linecap="round"`),
   pills: r(14, 20, 36, 26, "#e8e2d0", `rx="4"`) + r(14, 16, 36, 8, "#c9433a", `rx="3"`) + r(20, 30, 24, 10, paper) + l(22, 35, 42, 35, "#8a7f6a", 1),
   cigarette: r(8, 30, 12, 7, "#d89a5a", `rx="1"`) + r(20, 30, 28, 7, "#f4efe2") + r(19, 30, 2, 7, gold) + r(47, 30, 4, 7, "#8a8580") + r(50, 30, 2, 7, "#e0642a") + c(17, 33.5, 1.4, "#c9433a", `opacity=".7"`) + p("M52 28q4-6 0-11q-4-6 2-11", "none", `stroke="#9a9aa2" stroke-width="1.5"`),
   glass: p("M18 10h28l-6 28h-16z", "#c8dce8", `opacity=".7" stroke="#8aa2b2"`) + l(32, 38, 32, 52, "#8aa2b2", 2) + p("M22 54h20", "none", `stroke="#8aa2b2" stroke-width="3"`) + p("M39 14l-4 18", "none", `stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".7"`),
   key: c(18, 32, 9, "none", `stroke="${gold}" stroke-width="4"`) + l(27, 32, 54, 32, gold, 4) + l(46, 32, 46, 40, gold, 4) + l(52, 32, 52, 38, gold, 4) + p("M12 22q-4-10 6-12", "none", `stroke="#b3261e" stroke-width="2"`),
+  ash: e(32, 50, 22, 4, "#5a5550") + p("M14 49q5-15 18-17q13 2 18 17z", "#8a8580") + c(24, 44, 1, "#4a4540") + c(38, 42, 1.2, "#4a4540") + c(31, 38, 1.5, "#e0642a") + p("M32 32q-4-6 0-11q4-5 0-11", "none", `stroke="#9a9aa2" stroke-width="1.5"`),
   glove: p("M20 56V30l-6-12q0-4 4-2l6 10V10q0-4 4-4t4 4v14V8q0-4 4-4t4 4v16V12q0-4 4-4t4 4v28q0 10-8 16z", "#6a4428"),
   cartridge: r(26, 22, 12, 30, gold, `rx="1"`) + p("M26 22q6-18 12 0z", "#b87a3a") + r(24, 50, 16, 4, "#a8843a"),
   shoe: p("M10 38q0-6 6-6h8l6 6h12q14 0 14 10v4H10z", "#4a3426") + r(10, 50, 48, 4, "#2a1c14", `rx="1"`) + p("M24 32l4 6M30 34l4 6", "none", `stroke="#cdbf9f" stroke-width="1.5"`),
@@ -537,6 +548,23 @@ const ICONS = {
   cord: p("M10 20Q30 4 40 20T54 40Q40 60 24 46T12 30", "none", `stroke="#c9433a" stroke-width="4" stroke-linecap="round"`) + p("M50 40l6 10-4 2", "#d8b45a"),
   belt: p("M14 22Q26 12 38 22T56 22Q60 34 48 38Q30 42 20 46T10 52", "none", `stroke="#5a3a6b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"`) + [26, 33, 40].map((x) => c(x, 22 - (x === 33 ? 1 : 0), 1, "#2a1a30")).join("") + r(6, 14, 12, 14, "none", `rx="2" stroke="${gold}" stroke-width="2.5"`) + l(12, 16, 12, 26, gold, 2),
   wire: e(32, 32, 16, 12, "none", `stroke="${steel}" stroke-width="1.6"`) + e(32, 32, 12, 9, "none", `stroke="${steel}" stroke-width="1.6"`) + r(6, 28, 4, 10, "#c9a46a") + r(54, 28, 4, 10, "#c9a46a"),
+  // the activities that back up an alibi: each object is drawn the same whether the alibi holds or not
+  books: r(6, 54, 52, 4, "#5a3a22") + r(10, 16, 10, 38, "#6b2f2a") + r(21, 10, 9, 44, "#2f4a3a") + r(31, 18, 8, 36, "#3a3a5a") + p("M40 54l9-34 7 2-9 34z", "#7a5a2a") + [[10, 20], [21, 16], [31, 24]].map(([x, y]) => l(x + 1, y, x + 8, y, gold, 1.5) + l(x + 1, y + 26, x + 8, y + 26, gold, 1.5)).join(""),
+  inkwell: e(32, 53, 19, 3, "#1a1a24") + r(17, 32, 30, 20, "#2a2a38", `rx="4"`) + r(26, 25, 12, 8, "#3a3a4a", `rx="1"`) + p("M20 36h6", "none", `stroke="#5a5a70" stroke-width="2" stroke-linecap="round"`) + p("M35 28L51 6l3 2-15 22z", paper) + p("M35 28l-1 4 3-2z", ink),
+  grate: l(10, 30, 54, 30, "#3a3a3e", 3) + p("M12 32h40l-5 18H17z", "#2a2a2e") + [20, 26, 32, 38, 44].map((x) => l(x, 32, x - (x - 32) * 0.1, 50, "#55555a", 2)).join("") + l(17, 50, 14, 58, "#3a3a3e", 3) + l(47, 50, 50, 58, "#3a3a3e", 3) + c(10, 30, 3, gold) + c(54, 30, 3, gold),
+  cushion: p("M12 18q20-5 40 0q5 14 0 28q-20 5-40 0q-5-14 0-28z", "#8b2b22") + p("M16 22q16-4 32 0q4 10 0 20q-16 4-32 0q-4-10 0-20z", "none", `stroke="#b8483a" stroke-width="1.2"`) + [[12, 18], [52, 18], [12, 46], [52, 46]].map(([x, y]) => c(x, y, 2.6, gold)).join(""),
+  windowpane: r(12, 8, 40, 48, "#5a3a22", `rx="2"`) + r(16, 12, 32, 40, "#3e5a76") + l(32, 12, 32, 52, "#5a3a22", 3) + l(16, 32, 48, 32, "#5a3a22", 3) + [[20, 15], [38, 18], [24, 36], [42, 38]].map(([x, y]) => l(x, y, x - 2, y + 8, "#9fc3d8", 1, `opacity=".7"`)).join("") + r(8, 54, 48, 4, "#7a5232", `rx="1"`),
+  pianokeys: r(6, 18, 52, 30, "#f4efe2", `stroke="#8a7f6a" stroke-width="1.5" rx="2"`) + [13.4, 20.9, 28.3, 35.7, 43.1, 50.6].map((x) => l(x, 18, x, 48, "#8a7f6a", 1)).join("") + [11, 18.5, 33.5, 41, 48.5].map((x) => r(x, 18, 4.6, 18, ink, `rx="1"`)).join("") + r(4, 12, 56, 7, "#2a1a14", `rx="2"`),
+  bedspread: r(6, 28, 52, 24, "#6a4a7a", `rx="3"`) + r(6, 28, 52, 7, "#f4efe2", `rx="2"`) + e(22, 24, 13, 7, "#f4efe2", `stroke="#d8cfb8" stroke-width="1"`) + e(44, 24, 12, 6.5, "#f4efe2", `stroke="#d8cfb8" stroke-width="1"`) + l(10, 46, 54, 46, "#8a6a9a", 1.5),
+  decanter: c(32, 7, 4, "#c8dce8", `stroke="#8aa2b2" stroke-width="1.5"`) + p("M27 11h10v8q13 7 13 21 0 14-18 14T14 40q0-14 13-21z", "#c8dce8", `opacity=".75" stroke="#8aa2b2" stroke-width="1.5"`) + r(24, 36, 16, 8, paper, `rx="1"`) + p("M20 30q-3 6-2 12", "none", `stroke="#fff" stroke-width="1.5" stroke-linecap="round" opacity=".8"`),
+  cards: [-18, 0, 18].map((a, i) => `<g transform="rotate(${a} 32 52)">${r(22, 12, 20, 30, paper, `rx="2" stroke="#8a7f6a" stroke-width="1"`)}${i === 1 ? p("M26 15l3 4-3 4-3-4z", "#b3261e") : c(26, 19, 3, i ? "#b3261e" : ink)}${i === 2 ? c(32, 29, 4.5, "#b3261e") : ""}</g>`).join(""),
+  milkpan: p("M10 28h34v14q0 8-8 8H18q-8 0-8-8z", steel, `stroke="#8a9098" stroke-width="1.5"`) + e(27, 28, 17, 3, "#d8dde2", `stroke="#8a9098" stroke-width="1.5"`) + p("M44 32l14-5", "none", `stroke="#5a3a22" stroke-width="5" stroke-linecap="round"`) + p("M7 28h4", "none", `stroke="#8a9098" stroke-width="2"`),
+  bottle: r(6, 26, 36, 16, "#2f4a2a", `rx="7"`) + p("M40 29q6 0 8 2h6v6h-6q-2 2-8 2z", "#2f4a2a") + r(53, 29, 5, 10, "#8b2b22", `rx="1"`) + r(14, 28, 14, 12, paper, `rx="1"`) + l(16, 32, 26, 32, "#8b2b22", 1.2) + l(16, 36, 24, 36, "#8a7f6a", 1) + p("M10 30q8-2 26-2", "none", `stroke="#5a7a52" stroke-width="1.5" stroke-linecap="round"`),
+  balls: [[22, 38, "#b3261e"], [42, 32, "#f4efe2"], [34, 50, "#e8c15a"]].map(([x, y, f]) => c(x, y, 9, f, `stroke="#00000040" stroke-width="1"`) + c(x - 3, y - 3, 2.4, "#ffffffaa")).join(""),
+  flowerpot: p("M18 34h28l-4 20H22z", "#b8643a") + r(15, 29, 34, 7, "#c9744a", `rx="1"`) + e(32, 30, 15, 2, "#5a3e28") + p("M44 4l6 2-4 16-4-1z", "#6a4426") + p("M41 21l6 2-3 12q-3 2-5-1z", steel),
+  seeddish: p("M48 40q10-12 2-26", "none", `stroke="${steel}" stroke-width="2"`) + p("M12 40q0 12 20 12t20-12z", "#d8ccb0", `stroke="#a8946a" stroke-width="1.5"`) + e(32, 40, 20, 5, "#efe6cf", `stroke="#a8946a" stroke-width="1.5"`),
+  gramophone: r(10, 40, 36, 16, "#5a3a22", `rx="2"`) + e(28, 40, 15, 3.5, "#2f4a3a") + l(36, 38, 40, 28, gold, 3) + p("M38 30L48 6q10 2 10 14z", gold, `stroke="#8a6a2a" stroke-width="1"`) + c(28, 48, 2, gold),
+  brush: r(10, 22, 44, 13, "#a8784a", `rx="5"`) + r(16, 18, 32, 6, "#8a5a32", `rx="3"`) + Array.from({ length: 10 }, (_, i) => l(13 + i * 4.2, 35, 13 + i * 4.2, 44, "#d8c89a", 2)).join("") + c(46, 50, 3, "#eef3f6", `stroke="#9fc3d8" stroke-width="1"`) + c(52, 46, 2, "#eef3f6", `stroke="#9fc3d8" stroke-width="1"`),
   // ui
   interrogator: r(6, 10, 34, 24, paper, `rx="6"`) + p("M14 34l-2 8 10-8z", paper) + r(24, 26, 34, 22, "#d8b45a", `rx="6"`) + p("M48 48l4 8-10-8z", "#d8b45a") + c(15, 22, 2, ink) + c(23, 22, 2, ink) + c(31, 22, 2, ink),
   fieldagent: c(26, 26, 15, "#9fc3d8", `stroke="${paper}" stroke-width="4" fill-opacity=".35"`) + l(37, 37, 54, 54, paper, 7, `stroke-linecap="round"`) + p("M18 34l4-10 6 6 4-8", "none", `stroke="${gold}" stroke-width="2"`),
@@ -570,3 +598,5 @@ export function logo() {
   for (let i = 0; i < 18; i++) s += l((i * 37) % 200, (i * 29) % 60, (i * 37) % 200 - 3, (i * 29) % 60 + 10, "#6d8aa6", 1, `opacity=".4"`);
   return `<svg viewBox="0 0 200 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${s}</svg>`;
 }
+
+export const ICON_NAMES = Object.keys(ICONS);

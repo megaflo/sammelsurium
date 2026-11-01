@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { makeCase, newCaseCode, parseCaseCode, lookup, checkAccusation, solve, validate, nodesOf, survivors, leaves, KINDS, ROOMS, SUSPECTS, WEAPONS, CAUSES, VERSION } from "../tools/detektei/case.js";
-import { roomArt, portrait, icon } from "../tools/detektei/art.js";
+import { makeCase, newCaseCode, parseCaseCode, lookup, checkAccusation, solve, validate, nodesOf, survivors, leaves, clueSpots, KINDS, ROOMS, SUSPECTS, WEAPONS, MOTIVES, CAUSES, VERSION } from "../tools/detektei/case.js";
+import { roomArt, portrait, icon, ICON_NAMES } from "../tools/detektei/art.js";
 import { seeded, sampleCases, lookupDetector } from "../scripts/detektei-metrics.mjs";
 
 const codes = (n, seed = 7) => { const r = seeded(seed); return Array.from({ length: n }, () => newCaseCode(r)); };
@@ -327,4 +327,32 @@ test("art renders for every room, suspect, weapon and lock", () => {
     assert.doesNotMatch(svg, /undefined|NaN/);
   }
   for (const name of [...WEAPONS.map((w) => w.id), "strongbox", "tin", "attache"]) assert.doesNotMatch(icon(name), /undefined|NaN/);
+});
+
+test("every clue, motive and belonging names a picture that exists", () => {
+  // icon() quietly falls back to the magnifier, so a misspelt or missing picture would not show up otherwise.
+  const known = new Set(ICON_NAMES);
+  for (const m of MOTIVES) { assert.ok(known.has(m.icon), m.id); assert.ok(known.has(m.settled.icon), m.id); }
+  for (const s of SUSPECTS) assert.ok(known.has(s.token.icon), s.id);
+  for (const [id, kind] of Object.entries(KINDS)) if (kind.activity) assert.ok(known.has(kind.activity.icon), id);
+  for (const k of many) for (const c of Object.values(k.clues)) {
+    assert.ok(known.has(c.icon), `${k.code} ${c.id}: ${c.icon}`);
+    assert.notEqual(c.icon, "magnifier", `${k.code} ${c.id} has no picture of its own`);
+    assert.doesNotMatch(icon(c.icon), /undefined|NaN/);
+  }
+});
+
+test("every clue lies somewhere the field agent can find it again", () => {
+  for (const k of many.slice(0, 120)) {
+    const where = clueSpots(k);
+    for (const id of Object.keys(k.clues)) {
+      const w = where[id];
+      assert.ok(w, `${k.code} ${id} has no spot`);
+      assert.ok(k.rooms.some((r) => r.id === w.room));
+      assert.ok(w.at.startsWith(`${w.room}.`), `${k.code} ${id} at ${w.at}`);
+      assert.ok(w.path.length >= 1 && w.path.every((x) => typeof x === "string" && x));
+      const node = nodesOf(k).find((x) => x.gives.includes(`clue:${id}`));
+      if (node) assert.equal(node.at, w.at, `${k.code} ${id}`);
+    }
+  }
 });
