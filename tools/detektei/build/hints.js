@@ -1,4 +1,4 @@
-import { LOCK_RULES } from "../library.js";
+import { HIDE_ANON, HIDE_SAY, LOCK_RULES } from "../library.js";
 
 // Hints: what the interrogator learns and carries to the field agent.
 export function makeHints(c) {
@@ -7,12 +7,6 @@ export function makeHints(c) {
   const hints = {};
   hints.hWeapon = { id: "hWeapon", room: roomOf(spotWeapon).id, spot: spotWeapon.id, clue: "weapon", text: `${nm(W)}: "${sighting}"` };
   for (const lk of Object.values(locks)) hints[lk.hint] = { id: lk.hint, lock: lk.id, text: f(R.pick(LOCK_RULES[lk.type]), { phrase: lk.phrase }) };
-  const HIDE_SAY = [
-    "I saw {V} go into {room} this afternoon, straight after words with {owner}, and put something away {phrase}.",
-    "{V} had {owner} in for a talk this afternoon. Afterwards I saw {Vhim} go into {room} and tuck a paper away {phrase}.",
-    "If you want {V}'s secrets, try {room}. I saw {Vhim} hide something there this morning, {phrase}. {owner} had just left {Vhim}, in a temper.",
-  ];
-  const HIDE_ANON = ["Somebody was in {room} this morning, hiding something {phrase}. I saw a hand, not a face."];
   const opinionHint = {}; // `${speaker}>${about}` -> hint ids
   // A suspect with nothing to report sometimes reports a sighting all the same, which leads to a red herring. The
   // murderer does so more often than anyone: it sends the detectives the wrong way.

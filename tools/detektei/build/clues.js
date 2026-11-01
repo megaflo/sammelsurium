@@ -23,7 +23,7 @@ export function makeClues(c) {
 
   for (const s of suspects) {
     addClue(`alibi_${s.id}`, { title: s.claim.act.title, icon: s.claim.act.icon, text: there(s) ? s.claim.act.yes : s.claim.act.no });
-    for (const m of [s.motive, s.settled]) addClue(`motive_${s.id}_${m.id}`, { title: "Private papers", icon: m.icon, text: f(m.doc, { who: nm(s), surname: s.lib.surname }) });
+    for (const m of [s.motive, s.settled]) addClue(`motive_${s.id}_${m.id}`, { title: m.title, icon: m.icon, text: f(m.doc, { who: nm(s), surname: s.lib.surname }) });
   }
   const slow = core === "poison" ? " The label warns that it works slowly: death follows within the hour." : "";
   addClue("weapon", { title: cap(weapon.name), icon: weapon.id, text: `${cap(an(weapon.name))} with ${weapon.mark}, hidden ${spotWeapon.hiddenDef.found}: ${weapon.trace}.${slow}${traceVal.hair ? ` Caught on it is ${HAIR_WORD[traceVal.hair]}.` : ""}` });

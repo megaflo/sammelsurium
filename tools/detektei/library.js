@@ -10,8 +10,11 @@ export const VICTIMS = [
   { name: "Lady Honoria Vale", pro: "f", short: "Lady Vale", look: { hair: "long", hairColor: "#b9b6b0", suit: "#2f5a4a", shirt: "#e9dcc8", dress: true } },
   { name: "Mr. Silas Grimshaw", pro: "m", short: "Mr. Grimshaw", look: { hair: "short", hairColor: "#1f1b1b", suit: "#4a3a2a", shirt: "#f4efe2" } },
   { name: "Mrs. Edith Marlowe", pro: "f", short: "Mrs. Marlowe", look: { hair: "long", hairColor: "#7a4a2a", suit: "#2f3f6a", shirt: "#e9dcc8", dress: true } },
+  { name: "Sir Percival Dunmore", pro: "m", short: "Sir Percival", look: { hair: "short", hairColor: "#c9c4b8", suit: "#2a3a2a", shirt: "#f4efe2" } },
+  { name: "Mrs. Lavinia Crowe", pro: "f", short: "Mrs. Crowe", look: { hair: "long", hairColor: "#3b2a20", suit: "#3a2a5a", shirt: "#e9dcc8", dress: true } },
 ];
-export const MANORS = ["Thornbury Hall", "Ravenscourt", "Hollowmere Manor", "Blackwood House", "Wrenfield Park", "Ashgrove Manor"];
+export const MANORS = ["Thornbury Hall", "Ravenscourt", "Hollowmere Manor", "Blackwood House", "Wrenfield Park", "Ashgrove Manor",
+  "Fenwick Grange", "Coldharbour House", "Stillwater Abbey", "Kestrel Hall", "Morwenna Court"];
 
 // tone: hair colour word used by traces. Three suspects in a case always have three different tones.
 // token: the small personal item the murderer loses at the scene; look.token says where it is drawn.
@@ -56,48 +59,74 @@ export const SUSPECTS = [
     about: "I keep the grounds. {V} cared more for the roses than for the people.", voice: "Aye. ",
     token: { name: "a brass button from a dungaree strap", icon: "button", missing: "One of {n}'s dungaree straps is tied in a knot; its brass button is gone." },
     look: { skin: "#e2a988", hair: "braid", hairColor: "#d6b35e", outfit: "overalls", color: "#4f6b3a", accent: "#e9dfc4", extras: ["cap"], token: "strap" } },
+  { id: "quill", temper: "afraid", name: "Reverend Septimus Quill", short: "Reverend Quill", surname: "Quill", title: "Vicar of the parish", tone: "white",
+    about: "I have been {V}'s vicar for nine years. {V} came to church at Christmas, and only to be seen.", voice: "Dear me. ",
+    token: { name: "a mother-of-pearl shirt stud", icon: "stud", missing: "{n}'s shirt front is fastened with two studs where there should be three." },
+    look: { skin: "#eac3a4", hair: "short", hairColor: "#e8e6e0", outfit: "tailcoat", color: "#1c1c22", accent: "#f4f1ea", extras: ["glasses"], token: "studs" } },
+  { id: "garrow", temper: "angry", name: "Miss Rosalind Garrow", short: "Miss Garrow", surname: "Garrow", title: "Actress, a house guest", tone: "brown",
+    about: "{V} saw me as Lady Macbeth in the West End and invited me down for the week. I'm beginning to see why.", voice: "Really, darling. ",
+    token: { name: "an emerald drop earring", icon: "earring", missing: "{n} wears an emerald earring in one ear only." },
+    look: { skin: "#eec4a6", hair: "wavy", hairColor: "#5a3a22", outfit: "dress", color: "#2f6a5a", accent: "#e8d8b0", extras: ["pearls"], token: "earring", earring: "#3fa36b" } },
 ];
 
 // What a suspect's motive is, as found in a document, and how the suspect talks about it. Every suspect has two
 // grudges in every case; one of them was settled before tonight. settled: the paper that shows it, found in the
 // rooms. told: how a third person who knows about the settlement puts it. dinner: how it came up at dinner.
 export const MOTIVES = [
-  { id: "inheritance", label: "Inheritance", icon: "will",
+  { id: "inheritance", title: "New will", label: "Inheritance", icon: "will",
     doc: "A new will in {V}'s hand, signed last week. {who} is cut out entirely; the old will left {who} half the estate.",
     admit: "Yes, {V} meant to cut me out of the will. I was furious. But furious isn't murderous.",
     settled: { title: "Solicitor's letter", icon: "letter", text: "A letter from {V}'s solicitor, dated yesterday: at {Vhis} request the new will has been destroyed, and the old one, which provides for {who}, stands." },
     told: "That new will? {V} had it torn up. {who} was in the old will again by yesterday; {V} told me so {Vself}.",
     dinner: "{V} talked about wills over the soup. {who} went quite white." },
-  { id: "blackmail", label: "Blackmail", icon: "photo",
+  { id: "blackmail", title: "Photographs", label: "Blackmail", icon: "photo",
     doc: "Photographs and a note in {V}'s hand: \"{who}: two hundred pounds a month, or everyone sees these.\"",
     admit: "{V} was bleeding me dry with those photographs. I won't pretend I'm sorry it's over.",
     settled: { title: "Envelope of negatives", icon: "photo", text: "An envelope of photographic negatives, with a note in {V}'s hand: \"Returned to {who}. We are quits.\"" },
     told: "{V} gave those photographs back to {who} last week. I saw the envelope change hands. That business was over.",
     dinner: "{V} made a joke about photographs at dinner. Nobody laughed, {who} least of all." },
-  { id: "debts", label: "Debts", icon: "bill",
+  { id: "debts", title: "IOU", label: "Debts", icon: "bill",
     doc: "An IOU for four thousand pounds, signed by {who}. {V} has written across it: \"Pay by Monday or I call it in.\"",
     admit: "I owed {V} money. A great deal. {VHe} wasn't the forgiving kind.",
     settled: { title: "Receipt", icon: "bill", text: "A receipt in {V}'s hand: \"Received from {who} the sum of four thousand pounds. Paid in full.\" It is dated yesterday." },
     told: "That IOU was paid off. Every penny, yesterday; {V} crowed about it at tea.",
     dinner: "{V} said at dinner that some people in this house owed {Vhim} money. {who} studied the tablecloth." },
-  { id: "jealousy", label: "Jealousy", icon: "loveletter",
+  { id: "jealousy", title: "Letter to a sweetheart", label: "Jealousy", icon: "loveletter",
     doc: "A love letter from {V} to the person {who} hoped to marry. It is dated this week.",
     admit: "{V} took the one person I cared about. Just to prove {Vhe} could.",
-    settled: { title: "Note", icon: "letter", text: "A note to {V} from the person {who} hoped to marry: \"Please stop writing to me. I have given my word to {who}, and I mean to keep it.\"" },
+    settled: { title: "Note from a sweetheart", icon: "letter", text: "A note to {V} from the person {who} hoped to marry: \"Please stop writing to me. I have given my word to {who}, and I mean to keep it.\"" },
     told: "Whatever {V} wrote in those letters, it came to nothing. The engagement to {who} is on again; I had it from {V}.",
     dinner: "{V} read out a letter at dinner, a love letter. {who} left the table for a minute." },
-  { id: "revenge", label: "Revenge", icon: "clipping",
+  { id: "revenge", title: "Newspaper clipping", label: "Revenge", icon: "clipping",
     doc: "A yellowed newspaper clipping: \"{surname} family ruined in share swindle\". {V}'s name is circled in ink.",
     admit: "{V} ruined my family twenty years ago. I never forgot it.",
     settled: { title: "Deed of settlement", icon: "will", text: "A deed signed by {V} and {who} last month: {V} repays the {surname} family's losses from the old share swindle, with interest. Both have signed." },
     told: "{V} paid back the {surname} family last month, every pound lost in that old swindle. {who} shook {Vhis} hand on it; I was there.",
     dinner: "Somebody mentioned the stock market at dinner. {who} put down the fork and stared at {V}." },
-  { id: "exposure", label: "Fear of exposure", icon: "ledger",
+  { id: "exposure", title: "Ledger pages", label: "Fear of exposure", icon: "ledger",
     doc: "Ledger pages in {who}'s handwriting, with {V}'s red notes in the margin: \"Money missing. Police on Monday.\"",
     admit: "I borrowed from the accounts. {V} found out. I meant to pay it all back.",
-    settled: { title: "Note", icon: "paper", text: "A note in {V}'s hand: \"{who} has put back every penny. No police. The matter is closed.\"" },
+    settled: { title: "Note on the accounts", icon: "paper", text: "A note in {V}'s hand: \"{who} has put back every penny. No police. The matter is closed.\"" },
     told: "The missing money? {who} put it all back. {V} said the matter was closed, and {V} didn't say that lightly.",
     dinner: "{V} said something at dinner about auditors. {who} laughed too loudly." },
+  { id: "eviction", title: "Letter of eviction", label: "Eviction", icon: "letter",
+    doc: "A letter in {V}'s hand, dated today: \"{who} is to leave this house by the end of the month, and is not to come back.\" Sealed, ready for the post.",
+    admit: "{V} meant to turn me out of this house. Where would I have gone, at my age?",
+    settled: { title: "Torn-up letter", icon: "scrap", text: "The pieces of a torn-up letter ordering {who} out of the house. Across them, in {V}'s hand: \"Changed my mind. {who} stays.\"" },
+    told: "{V} tore up that letter about turning {who} out. I watched {Vhim} do it, yesterday after lunch.",
+    dinner: "{V} said at dinner that some people had outstayed their welcome. {who} stopped eating." },
+  { id: "forgery", title: "Forged cheque", label: "Forgery", icon: "bill",
+    doc: "A cheque for five hundred pounds bearing {V}'s signature, and pinned to it {V}'s note: \"Not my hand. {who} forged it. The bank hears of it on Monday.\"",
+    admit: "I signed {V}'s name. Once. I was desperate, and {V} found out.",
+    settled: { title: "Letter from the bank", icon: "letter", text: "A letter from {V}'s bank, dated yesterday: at {Vhis} instruction the disputed cheque has been honoured, and no complaint will be made against {who}." },
+    told: "That cheque business? {V} squared it with the bank. No complaint against {who}; {V} told me so {Vself}.",
+    dinner: "{V} talked about forgers at dinner, and how they always hang themselves in the end. {who} reached for the wine." },
+  { id: "theft", title: "Pawnbroker's letter", label: "Theft", icon: "ticket",
+    doc: "A pawnbroker's letter to {V}: the family's emerald brooch was pawned in London last month by {who}. {V} has underlined the name twice.",
+    admit: "I pawned the brooch. I meant to buy it back before anyone noticed. {V} noticed.",
+    settled: { title: "Pawnbroker's receipt", icon: "ticket", text: "A pawnbroker's receipt: the emerald brooch, redeemed in full. Pinned to it, in {V}'s hand: \"Back where it belongs. {who} and I are square.\"" },
+    told: "The brooch is back in its case; {who} redeemed it. {V} showed me the receipt and said that was the end of it.",
+    dinner: "{V} asked at dinner whether anyone had seen the emerald brooch lately. {who} said nothing at all." },
 ];
 
 // Where the suspect who lies to hide a secret really was. Keyed by that suspect's motive.
@@ -108,6 +137,9 @@ export const SECRETS = {
   jealousy: { act: "out in the garden, waiting for someone who never came", told: "waiting in the garden for a secret meeting", trace: "Wet grass clings to {n}'s shoes, and the hems are damp." },
   revenge: { act: "on the terrace with a bottle of {V}'s whisky, thinking about old wrongs", told: "drinking alone on the terrace", trace: "{n}'s breath smells of whisky, and the eyes are red." },
   exposure: { act: "in the gatehouse, burning the account books before anyone could read them", told: "burning the account books in the gatehouse", trace: "There is soot on {n}'s fingertips and a smell of smoke." },
+  eviction: { act: "up in the box room, packing my trunk in case I was thrown out tonight", told: "packing a trunk in the box room, ready to leave", trace: "A luggage label is stuck to {n}'s sleeve, and the cuffs are grey with box-room dust." },
+  forgery: { act: "in the post room by the back door, steaming open {V}'s letter to the bank", told: "steaming open {V}'s letters in the post room", trace: "{n}'s fingertips are pink and puckered, as if from steam, and there's a smear of sealing wax on one cuff." },
+  theft: { act: "in the gun room, hunting through {V}'s cabinet for the pawn ticket", told: "searching the gun room for a pawn ticket", trace: "There's gun oil on {n}'s fingers; the smell of it hangs about the cuffs." },
 };
 
 // Traces an interrogator can notice on a suspect. A lying suspect shows the trace of the secret above; everybody
@@ -198,6 +230,13 @@ export const FINDS = [
   { title: "Burnt scrap", icon: "scrap", where: "scf", text: "A scrap of burnt paper in {X}'s handwriting. Only a few words are left: \"...will never forgive...\"", react: "A letter to my sister that I thought better of sending. We don't get on." },
   { title: "Love letter", icon: "loveletter", where: "scw", text: "A love letter to {X}, unsigned. The handwriting is shaky.", react: "That letter is private, and it has nothing to do with {V}. Put it away." },
   { title: "Letter of complaint", icon: "letter", where: "scw", text: "A letter from {X} to {V}, complaining about the draughts in the guest rooms. Three pages long.", react: "The draughts in this house are criminal. That's the only crime I've ever accused anyone of." },
+  { title: "Opera programme", icon: "paper", where: "scw", text: "A programme from Covent Garden, last Saturday's Tosca, with {X}'s name on the cover and a telephone number pencilled inside.", react: "I went to the opera. The number is my tailor's, if you must know." },
+  { title: "Chess problem", icon: "paper", where: "sc", text: "A chess problem clipped from The Times, with {X}'s solution scrawled underneath. It is wrong.", react: "I never claimed to be good at chess. Only keen." },
+  { title: "Sweepstake ticket", icon: "ticket", where: "scw", text: "An Irish Sweepstake ticket in {X}'s name. The draw was last week.", react: "A shilling's worth of hope. It didn't come off." },
+  { title: "Recipe card", icon: "paper", where: "scw", text: "A recipe card for seed cake in {X}'s handwriting, with a note at the bottom: \"less sugar for {V}\".", react: "{V} liked seed cake. I had it made for {Vhim} once or twice. Is that sinister now?" },
+  { title: "Unsent postcard", icon: "letter", where: "scw", text: "A postcard of Blackpool Tower in {X}'s hand, addressed but never sent: \"Wish you were here. Wish I wasn't.\"", react: "A joke for an old friend. I never got round to posting it." },
+  { title: "Hotel bill", icon: "bill", where: "scw", text: "A bill from the Grand Hotel, Eastbourne, made out to {X}: two nights, for two guests.", react: "I stayed at the seaside. With whom is my own affair." },
+  { title: "Chemist's receipt", icon: "bill", where: "scw", text: "A receipt from the village chemist, made out to {X}: one bottle of laudanum.", react: "For my nerves. Ask the chemist; I buy a bottle every month." },
   { title: "Stained handkerchief", icon: "handkerchief", where: "scf", presence: true, text: "A handkerchief embroidered with the letter {I}, with a few spots of dried blood.", react: "A nosebleed, days ago. The damp in this house gives me nosebleeds." },
   { title: "Spectacle case", icon: "speccase", where: "scf", presence: true, text: "An empty spectacle case. The initial {I} is stamped on the lid.", react: "Oh, there it is. I've been looking for that case all week." },
   { title: "Single glove", icon: "glove", where: "scf", presence: true, text: "A single leather driving glove with the initial {I} stamped inside the cuff.", react: "I lost that glove days ago. I've been driving one-handed ever since." },
@@ -214,6 +253,8 @@ export const EVENING = [
   "Dinner, a hand of bridge, then everyone went their own way.",
   "We dined at eight. {V} barely said a word all through the meal.",
   "Dinner, and a glass of port after. Then the storm got worse and everyone scattered.",
+  "Dinner at eight. {V} picked a quarrel with everyone in turn, then went off alone.",
+  "A long dinner, short tempers all round, and an early night for most of us.",
 ];
 export const NOTICED = [
   "Nothing at all. I was quite absorbed in what I was doing.",
@@ -222,8 +263,12 @@ export const NOTICED = [
   "The lights flickered once, around {T}. That's all.",
   "I heard a door slam somewhere downstairs, a little after {T}. The wind, I thought.",
   "A dog barking out at the stables, just after {T}. Nothing more.",
+  "A shutter came loose upstairs around {T} and banged for an age. Nobody went to see to it.",
+  "I thought I smelt smoke at one point, but it was only the fires drawing badly in the wind.",
+  "Somebody on the back stairs a little before {T}. A servant, I supposed.",
 ];
-export const ALONE = ["Alone, I'm afraid.", "Nobody else was there.", "On my own, the whole time.", "Nobody can vouch for me, if that's what you mean."];
+export const ALONE = ["Alone, I'm afraid.", "Nobody else was there.", "On my own, the whole time.", "Nobody can vouch for me, if that's what you mean.",
+  "I prefer my own company of an evening.", "Quite alone. I like it that way, in a house like this."];
 
 // ---------- library: twists ----------
 // A case has at most one twist in how the murder was done and at most one in what the others did, and often none.
@@ -234,11 +279,14 @@ export const ALONE = ["Alone, I'm afraid.", "Nobody else was there.", "On my own
 //   lovers: the two innocent suspects lie to hide an affair, and give each other away when the lie breaks.
 //   frame:  the murderer left an innocent suspect's lost belonging under the body.
 export const CORE_TWISTS = ["staged", "moved", "poison"];
-export const TRYST = ["in the summer house", "in the boathouse down by the lake", "in the old nursery at the top of the house", "in the chauffeur's flat over the garage"];
-export const TRYST_TRACE = ["A crushed rose petal is caught in {n}'s collar.", "{n} smells faintly of somebody else's scent: lily of the valley.", "There is a smear of lipstick, not quite wiped away, near {n}'s ear."];
+export const TRYST = ["in the summer house", "in the boathouse down by the lake", "in the old nursery at the top of the house", "in the chauffeur's flat over the garage",
+  "in the old greenhouse behind the stables", "in the folly at the end of the lake path"];
+export const TRYST_TRACE = ["A crushed rose petal is caught in {n}'s collar.", "{n} smells faintly of somebody else's scent: lily of the valley.", "There is a smear of lipstick, not quite wiped away, near {n}'s ear.",
+  "{n}'s collar is buttoned crooked, as if in a hurry, and there's a leaf caught in it."];
 export const STAGED_TELL = [
   "Odd, though: the winding crown is pulled out, the way you pull it to set the hands.",
   "Odd, though: the hands still turn when you touch the crown. Someone has pulled it out to set them.",
+  "Odd, though: the crown is pulled out, and there's a fresh scratch beside it, as if a fingernail slipped.",
 ];
 
 // Relationships between two suspects, as each tells it. {o}: the other one.
@@ -248,17 +296,39 @@ export const RELATIONS = [
   { id: "kin", a: "{o} is my cousin, for my sins. Family, you know.", b: "{o} and I are cousins. We were close once." },
   { id: "strangers", a: "I barely know {o}. We met on Friday.", b: "{o}? Arrived on Friday. Hardly said a word to me." },
   { id: "debt", a: "{o} owes me twenty pounds and pretends not to remember.", b: "I owe {o} a little money. A trifle. {o} keeps mentioning it." },
+  { id: "flame", a: "{o} and I were engaged once, a long time ago. It ended badly.", b: "{o}? We were nearly married, once. Ancient history." },
+  { id: "neighbours", a: "{o} lives two villages over. We nod at church and leave it there.", b: "Neighbours, more or less. Perfectly civil, and no more than that." },
 ];
-export const NOT_SEEN = ["I couldn't tell you where {o} was. I didn't see {o} all evening.", "Where {o} really was? No idea, I'm afraid.", "I didn't see {o} after dinner."];
+export const NOT_SEEN = ["I couldn't tell you where {o} was. I didn't see {o} all evening.", "Where {o} really was? No idea, I'm afraid.", "I didn't see {o} after dinner.",
+  "Not a glimpse of {o} all evening. Ask somebody else.", "I wasn't keeping an eye on {o}, Inspector. I had my own troubles."];
 export const SEEN = [
   "{o} wasn't in the {r}? No. I can tell you where {o} was: I saw {o} {told}, at about {T}.",
   "So {o} lied to you. I'm not surprised. But I saw {o} {told} just before {T}, and {o} was still there when I went past again.",
+  "{o} wasn't in the {r}, no. I kept quiet to spare {o} the embarrassment, but I saw {o} {told}, around {T}. I'd swear to it.",
 ];
-export const BODY_REACT = ["Dreadful. Simply dreadful. Must you show me that?", "Put it away, please. I saw enough when they found {Vhim}.", "Poor {V}. Whatever {Vhe} was, {Vhe} didn't deserve that."];
-export const WEAPON_REACT = ["Good heavens. Is that what did it? I've never touched it.", "I've seen it about the house, of course. Everyone has.", "Must I look at that? It could have been anyone's hand on it."];
-export const TRACE_REACT = ["Half the house could have left that.", "And you think that points to me? Look again.", "I wouldn't know anything about that."];
-export const STAIN_REACT = ["Something spilled, I expect. The maids are forever scrubbing.", "A stain? I never noticed one.", "I haven't been on my knees in that room, Inspector."];
-export const OTHERS_PAPER = ["That's {o}'s business, not mine.", "I knew nothing about that.", "Well, well. {o} kept that quiet."];
+export const BODY_REACT = ["Dreadful. Simply dreadful. Must you show me that?", "Put it away, please. I saw enough when they found {Vhim}.", "Poor {V}. Whatever {Vhe} was, {Vhe} didn't deserve that.",
+  "I'd rather not look again, if it's all the same to you.", "{V} had enemies. That much is plain from this.", "Cover {Vhim} up, for pity's sake."];
+export const WEAPON_REACT = ["Good heavens. Is that what did it? I've never touched it.", "I've seen it about the house, of course. Everyone has.", "Must I look at that? It could have been anyone's hand on it.",
+  "That? It's always lying about somewhere in this house.", "Take it away. I don't want my fingers anywhere near it.", "So that's what it was. I'd wondered."];
+export const TRACE_REACT = ["Half the house could have left that.", "And you think that points to me? Look again.", "I wouldn't know anything about that.",
+  "You read a great deal into very little, Inspector.", "Is that meant to frighten me?"];
+export const STAIN_REACT = ["Something spilled, I expect. The maids are forever scrubbing.", "A stain? I never noticed one.", "I haven't been on my knees in that room, Inspector.",
+  "The floors in this house have seen a century of spills.", "Ask the maids. Scrubbing is their business, not mine."];
+// Where a witness saw a paper hidden. {owner}: whose paper it is; HIDE_ANON when the witness can't say.
+export const HIDE_SAY = [
+  "I saw {V} go into {room} this afternoon, straight after words with {owner}, and put something away {phrase}.",
+  "{V} had {owner} in for a talk this afternoon. Afterwards I saw {Vhim} go into {room} and tuck a paper away {phrase}.",
+  "If you want {V}'s secrets, try {room}. I saw {Vhim} hide something there this morning, {phrase}. {owner} had just left {Vhim}, in a temper.",
+  "Earlier today I came upon {V} in {room}, putting something away {phrase}. {VHe} had just been shouting at {owner}.",
+  "{owner} came out of {V}'s study white as a sheet this morning. Not ten minutes later {V} went into {room}, and hid a paper {phrase}.",
+];
+export const HIDE_ANON = ["Somebody was in {room} this morning, hiding something {phrase}. I saw a hand, not a face.",
+  "This morning I noticed somebody in {room}, hiding something {phrase}. They had their back to me; I couldn't tell you who."];
+// What a suspect says when shown something that means nothing to them.
+export const SHRUG = ["I don't see what that has to do with me.", "Should that mean something to me?", "I've never seen it before.",
+  "You've lost me, Inspector.", "I can't help you with that, I'm afraid."];
+export const OTHERS_PAPER = ["That's {o}'s business, not mine.", "I knew nothing about that.", "Well, well. {o} kept that quiet.",
+  "I'd rather not discuss {o}'s affairs.", "Good grief. I had no idea.", "{o} never breathed a word of it to me."];
 
 // Combination locks. Each lock is set to a number the field agent finds three candidates for; only the interrogator
 // learns which one counts. date: day and month of an event (4 digits). phone: the last three digits of a number.
@@ -280,8 +350,10 @@ export const CARDS = [
   { id: "bank", phrase: "{Vhis} bank manager", item: "A calling card: \"Mr. A. Crabbe, Manager, County Bank. Telephone: Guildford {num}.\"" },
 ];
 export const LOCK_RULES = {
-  date: ["The combination? {V} set every lock in the house to the date of {phrase}. Sentimental, for someone so hard.", "The combination? It's the date of {phrase}, day and month. {V} used it for everything."],
-  phone: ["{V} could never remember numbers. It opens with the last three digits of the telephone number of {phrase}.", "That box? The last three figures of the telephone number of {phrase}. {V} told me once, in drink."],
+  date: ["The combination? {V} set every lock in the house to the date of {phrase}. Sentimental, for someone so hard.", "The combination? It's the date of {phrase}, day and month. {V} used it for everything.",
+    "Every lock {V} owned opened on the date of {phrase}, the day and then the month. {VHe} told me so once, in a soft moment."],
+  phone: ["{V} could never remember numbers. It opens with the last three digits of the telephone number of {phrase}.", "That box? The last three figures of the telephone number of {phrase}. {V} told me once, in drink.",
+    "The last three digits of the telephone number of {phrase}. {V} said a number like that was safer than any date."],
 };
 // Lock objects that stand on a surface or the floor; and furniture parts that can carry a lock of their own.
 export const BOXES = [

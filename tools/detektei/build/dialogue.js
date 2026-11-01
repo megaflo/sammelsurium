@@ -1,4 +1,4 @@
-import { ALONE, BODY_REACT, EVENING, NOTICED, NOT_SEEN, OTHERS_PAPER, RELATIONS, SEEN, SHOES, SMOKES, STAIN_REACT, TRACE_REACT, WEAPON_REACT } from "../library.js";
+import { ALONE, BODY_REACT, EVENING, NOTICED, NOT_SEEN, OTHERS_PAPER, RELATIONS, SEEN, SHOES, SHRUG, SMOKES, STAIN_REACT, TRACE_REACT, WEAPON_REACT } from "../library.js";
 import { an, cap, fill, fmtTime, rn } from "../util.js";
 
 // Dialogue: questions, confrontations and observations for each suspect.
@@ -111,7 +111,7 @@ export function writeDialogue(c) {
     }
     obs.forEach((o) => { o.requires = []; o.gives = []; o.events = o.events || []; });
     dialog[s.id] = { questions: qs, confront, observations: obs,
-      fallback: say(s, R.pick(["I don't see what that has to do with me.", "Should that mean something to me?", "I've never seen it before."])) };
+      fallback: say(s, R.pick(SHRUG)) };
   });
 
   Object.assign(c, { dialog });
